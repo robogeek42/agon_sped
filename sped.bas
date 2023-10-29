@@ -1,18 +1,23 @@
-10 REM Sprite editor test
+10 REM Sprite editor
+15 VERSION$="v0.3"
 20 ON ERROR GOTO 5000
+23 REM memory - just for file load at the moment
+25 DIM graphics 1024
+27 MB%=&40000
 30 MODE 8
 40 SW%=320 : SH%=240
 50 COL%=3
 60 GRIDX%=16 : GRIDY%=16 : W%=16 : H%=16
 70 DIM G%(W%*H%) : FOR I%=0 TO W%*H%-1 : G%(I%)=0
-75 DIM CL%(63) : DIM RGB%(64*3) : PROCloadLUT
+75 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
 79 REM palette x/y and sprite x/y positions on screen
 80 PALX%=160 : PALY%=16 : SPX%=16 : SPY%=160
 85 PX%=0 : PY%=0 : REM selected palette position
 90 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
 100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
-102 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
-104 PROCcreateSprite(W%,H%)
+110 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
+120 FILENAME$="" : FLINE%=24
+130 PROCcreateSprite(W%,H%)
 140 PROCdrawScreen
 200 REM Main Loop
 210 REPEAT
@@ -22,7 +27,7 @@
 240 REM left=8, right=21, up=11, down=10, tab=9, nums 0=48 ... 9=57
 250 REM q=110, x=120, s=115, spc=32, w,a,s,d = 119,97,115,100
 260 REM a=97 ... z=122, ","=44, "."=46  backspace=127 c=99
-270 IF key=-1 GOTO 470
+270 IF key=-1 GOTO 600 : REM skip to Until
 280 PROCgridcursor(0)
 290 IF key = 120 ISEXIT=1 : REM x=exit
 300 REM grid cursor movement
@@ -40,11 +45,14 @@
 420 IF key = 127 THEN PROCsetcol(PX%,PY%,0) : UPDATESPRITE=1
 430 IF key = 99 THEN PROCcleargrid(0) : UPDATESPRITE=1
 440 IF key = 102 THEN PROCcleargrid(COL%) : UPDATESPRITE=1
-450 PROCprintColour(27,2)
-460 IF UPDATESPRITE=1 THEN PROCshowSprite
-470 PROCgridcursor(1)
-480 UNTIL ISEXIT = 1
-500 GOTO 5000
+450 REM V=save L=load
+460 IF key = 118 THEN PROCsaveFile : REM V=saVe file 
+470 IF key = 108 THEN PROCloadFile
+480 PROCprintColour(27,2)
+490 IF UPDATESPRITE=1 THEN PROCshowSprite
+500 PROCgridcursor(1)
+600 UNTIL ISEXIT = 1
+610 GOTO 5000
 
 700 REM draw screen 
 710 DEF PROCdrawScreen
@@ -56,18 +64,21 @@
 770 PROCprintColour(27,2)
 780 PROCgridcursor(1)
 790 PROCRect(SPX%-2, SPY%-2, W%+3, H%+3, GRIDCOL%)
-800 COLOUR 41:PRINT TAB(0,0);"SPRITE EDITOR"
-810 COLOUR 20:PRINT TAB(14,0);"for Agon"
+800 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
+810 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
+814 COLOUR 8:PRINT TAB(27,0);VERSION$;
+816 COLOUR 26:PRINT TAB(32,0);"by Assif";
 820 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
-830 GCOL 0,15 : MOVE 0,26*8-2 : DRAW 320,26*8-2
+830 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
 840 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move in grid";
 850 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Select palette";
 860 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
 870 COLOUR 21 : PRINT TAB(0 ,29);"F";     :COLOUR 19:PRINT TAB(7,29);"Fill";
 880 COLOUR 21 : PRINT TAB(14,28);"Backsp";:COLOUR 19:PRINT TAB(21,28);"Clear";
 890 COLOUR 21 : PRINT TAB(14,29);"X";     :COLOUR 19:PRINT TAB(21,29);"Exit";
-900 COLOUR 21 : PRINT TAB(30,28);"S";     :COLOUR 19:PRINT TAB(33,28);"Save";
+900 COLOUR 21 : PRINT TAB(30,28);"V";     :COLOUR 19:PRINT TAB(33,28);"Save";
 910 COLOUR 21 : PRINT TAB(30,29);"L";     :COLOUR 19:PRINT TAB(33,29);"Load";
+920 PROCshowFilename
 980 COLOUR 15
 990 ENDPROC
 
@@ -142,6 +153,8 @@
 1790 ENDPROC
 
 1800 REM show sprite
+1804 REM currently copies all data from grid to sprite
+1805 REM this is slow - TODO do this in Z80 asm to speed up
 1810 DEF PROCshowSprite
 1820 VDU 23,27,0,0: REM Select bitmap 0
 1825 VDU 23,27,1,W%;H%;
@@ -178,6 +191,48 @@
 2020 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
 2090 ENDPROC
 
+2100 DEF PROCsaveFile
+2110 IF FILENAME$="" THEN PROCgetSaveFilename
+2190 ENDPROC
+
+2200 DEF PROCgetSaveFilename
+2210 PRINT TAB(0,FLINE%);SPC(39);
+2220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+2230 COLOUR 15 : INPUT FILENAME$;
+2240 PROCshowFilename
+2290 ENDPROC
+
+2300 DEF PROCloadFile
+2310 PRINT TAB(0,FLINE%);SPC(39);
+2320 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+2330 COLOUR 15 : INPUT FILENAME$;
+2340 FHAN%=OPENIN(FILENAME$)
+2350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; :FILENAME$="":ENDPROC
+2360 FLEN%=EXT#FHAN% : IF FLEN%<>768 THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";:FILENAME$="":ENDPROC
+2370 CLOSE#FHAN% : PROCloadDataFile(FHAN%)
+2390 ENDPROC
+
+2400 DEF PROCshowFilename
+2410 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
+2420 PRINT TAB(0,FLINE%);SPC(39);
+2430 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);FILENAME$;
+2490 ENDPROC
+
+2500 DEF PROCloadDataFile(h%)
+2505 OSCLI("LOAD " + FILENAME$ + " " + STR$(MB%+graphics))
+2510 FOR I%=0 TO (W%*H%)-1
+2520 DATR% = ?(graphics+I%*3+0) DIV 85
+2530 DATG% = ?(graphics+I%*3+1) DIV 85
+2540 DATB% = ?(graphics+I%*3+2) DIV 85
+2550 IND% = DATR% * 16 + DATG% * 4 + DATB%
+2560 col% = REVLU%(IND%)
+2570 G%(I%) = col% : x%=I% MOD W% : y%=I% DIV W%
+2580 PROCFilledRect(GRIDX%+x%*8, GRIDY%+y%*8, 8, 8, col%)
+2590 NEXT I%
+2600 PROCdrawgrid(W%,H%,GRIDX%,GRIDY%)
+2610 PROCshowSprite
+2690 ENDPROC
+
 3000 REM PROCFilledRect draw a filled rectangle
 3001 REM assume screen scaling OFF
 3010 DEF PROCFilledRect(x%,y%,w%,h%,c%)
@@ -205,7 +260,7 @@
 4040 READ CL%(I%)
 4050 NEXT
 4060 FOR I%=0 TO 63
-4070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2)
+4070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2),REVLU%(I%)
 4080 NEXT
 4090 ENDPROC
 
@@ -218,23 +273,23 @@
 4260 DATA &21, &23, &24, &25, &26, &27, &29, &2B
 4270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
 4280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
-4300 REM - RGB colours 
-4310 DATA &00, &00, &00, &00, &00, &55, &00, &00, &AA, &00, &00, &FF
-4320 DATA &00, &55, &00, &00, &55, &55, &00, &55, &AA, &00, &55, &FF
-4330 DATA &00, &AA, &00, &00, &AA, &55, &00, &AA, &AA, &00, &AA, &FF
-4340 DATA &00, &FF, &00, &00, &FF, &55, &00, &FF, &AA, &00, &FF, &FF
-4350 DATA &55, &00, &00, &55, &00, &55, &55, &00, &AA, &55, &00, &FF
-4360 DATA &55, &55, &00, &55, &55, &55, &55, &55, &AA, &55, &55, &FF
-4370 DATA &55, &AA, &00, &55, &AA, &55, &55, &AA, &AA, &55, &AA, &FF
-4380 DATA &55, &FF, &00, &55, &FF, &55, &55, &FF, &AA, &55, &FF, &FF
-4390 DATA &AA, &00, &00, &AA, &00, &55, &AA, &00, &AA, &AA, &00, &FF
-4400 DATA &AA, &55, &00, &AA, &55, &55, &AA, &55, &AA, &AA, &55, &FF
-4410 DATA &AA, &AA, &00, &AA, &AA, &55, &AA, &AA, &AA, &AA, &AA, &FF
-4420 DATA &AA, &FF, &00, &AA, &FF, &55, &AA, &FF, &AA, &AA, &FF, &FF
-4430 DATA &FF, &00, &00, &FF, &00, &55, &FF, &00, &AA, &FF, &00, &FF
-4440 DATA &FF, &55, &00, &FF, &55, &55, &FF, &55, &AA, &FF, &55, &FF
-4450 DATA &FF, &AA, &00, &FF, &AA, &55, &FF, &AA, &AA, &FF, &AA, &FF
-4460 DATA &FF, &FF, &00, &FF, &FF, &55, &FF, &FF, &AA, &FF, &FF, &FF
+4300 REM - RGB colours with a reverse map
+4310 DATA &00, &00, &00,  0, &00, &00, &55, 16, &00, &00, &AA,  4, &00, &00, &FF, 12
+4320 DATA &00, &55, &00, 17, &00, &55, &55, 18, &00, &55, &AA, 19, &00, &55, &FF, 20
+4330 DATA &00, &AA, &00,  2, &00, &AA, &55, 21, &00, &AA, &AA,  6, &00, &AA, &FF, 22
+4340 DATA &00, &FF, &00, 10, &00, &FF, &55, 23, &00, &FF, &AA, 24, &00, &FF, &FF, 14
+4350 DATA &55, &00, &00, 25, &55, &00, &55, 26, &55, &00, &AA, 27, &55, &00, &FF, 28
+4360 DATA &55, &55, &00, 29, &55, &55, &55,  8, &55, &55, &AA, 30, &55, &55, &FF, 31
+4370 DATA &55, &AA, &00, 32, &55, &AA, &55, 33, &55, &AA, &AA, 34, &55, &AA, &FF, 35
+4380 DATA &55, &FF, &00, 36, &55, &FF, &55, 37, &55, &FF, &AA, 38, &55, &FF, &FF, 39
+4390 DATA &AA, &00, &00,  1, &AA, &00, &55, 40, &AA, &00, &AA,  5, &AA, &00, &FF, 41
+4400 DATA &AA, &55, &00, 42, &AA, &55, &55, 43, &AA, &55, &AA, 44, &AA, &55, &FF, 45
+4410 DATA &AA, &AA, &00,  3, &AA, &AA, &55, 46, &AA, &AA, &AA,  7, &AA, &AA, &FF, 47
+4420 DATA &AA, &FF, &00, 48, &AA, &FF, &55, 49, &AA, &FF, &AA, 50, &AA, &FF, &FF, 51
+4430 DATA &FF, &00, &00,  9, &FF, &00, &55, 52, &FF, &00, &AA, 53, &FF, &00, &FF, 13
+4440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
+4450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
+4460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
 
 5000 REM Error Handling
 5010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
