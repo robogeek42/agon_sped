@@ -1,5 +1,5 @@
 10 REM Sprite editor
-15 VERSION$="v0.3"
+15 VERSION$="v0.4"
 20 ON ERROR GOTO 5000
 23 REM memory - just for file load at the moment
 25 DIM graphics 1024
@@ -63,7 +63,7 @@
 760 PROCselectcol(1)
 770 PROCprintColour(27,2)
 780 PROCgridcursor(1)
-790 PROCRect(SPX%-2, SPY%-2, W%+3, H%+3, GRIDCOL%)
+790 PROCrect(SPX%-2, SPY%-2, W%+3, H%+3, GRIDCOL%)
 800 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
 810 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
 814 COLOUR 8:PRINT TAB(27,0);VERSION$;
@@ -101,7 +101,7 @@
 1210 DEF PROCdrawpalette(x%,y%)
 1220 FOR N%=0 TO 3
 1230 FOR I%=0 TO 15
-1240 PROCFilledRect(1.5+x%+N%*10,0.5+y%+I%*10,7,7,I%+N%*16)
+1240 PROCfilledRect(1+x%+N%*10,1+y%+I%*10,6,6,I%+N%*16)
 1250 NEXT I%
 1260 NEXT N%
 1270 ENDPROC
@@ -109,23 +109,23 @@
 1300 REM select col
 1310 DEF PROCselectcol(c%)
 1320 x% = COL% DIV 16 : y% = COL% MOD 16
-1330 PROCRect(PALX%+x%*10, PALY%+y%*10, 8, 8, 0)
+1330 PROCrect(PALX%+x%*10, PALY%+y%*10, 8, 8, 0)
 1340 COL%=c%
 1350 x% = COL% DIV 16 : y% = COL% MOD 16
-1360 PROCRect(PALX%+x%*10, PALY%+y%*10, 8, 8, 15)
+1360 PROCrect(PALX%+x%*10, PALY%+y%*10, 8, 8, 15)
 1370 ENDPROC
 
 1400 REM draw gridcursor
 1410 DEF PROCgridcursor(switch%)
 1420 col%=GRIDCOL% : REM off
 1430 IF switch%=1 THEN col%=CURSCOL% : REM on
-1440 PROCRect(GRIDX%+PX%*8, GRIDY%+PY%*8, 8, 8, col%)
+1440 PROCrect(GRIDX%+PX%*8, GRIDY%+PY%*8, 8, 8, col%)
 1490 ENDPROC
 
 1500 REM set colour in grid
 1510 DEF PROCsetcol(x%,y%,c%)
 1520 G%(x%+y%*W%)=c%
-1530 PROCFilledRect(GRIDX%+x%*8, GRIDY%+y%*8, 8, 8, c%)
+1530 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
 1590 ENDPROC
 
 1600 REM clear grid to a colour
@@ -135,7 +135,7 @@
 1640 G%(i%+j%*W%)=col%
 1650 NEXT 
 1660 NEXT
-1670 PROCFilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
+1670 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
 1680 PROCdrawgrid(W%,H%,GRIDX%,GRIDY%)
 1690 ENDPROC
 
@@ -227,24 +227,26 @@
 2550 IND% = DATR% * 16 + DATG% * 4 + DATB%
 2560 col% = REVLU%(IND%)
 2570 G%(I%) = col% : x%=I% MOD W% : y%=I% DIV W%
-2580 PROCFilledRect(GRIDX%+x%*8, GRIDY%+y%*8, 8, 8, col%)
+2580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
 2590 NEXT I%
 2600 PROCdrawgrid(W%,H%,GRIDX%,GRIDY%)
 2610 PROCshowSprite
 2690 ENDPROC
 
-3000 REM PROCFilledRect draw a filled rectangle
+3000 REM PROCfilledRect draw a filled rectangle
 3001 REM assume screen scaling OFF
-3010 DEF PROCFilledRect(x%,y%,w%,h%,c%)
+3002 REM update for basic 3.00, use 85 to plot a triangle, or 101 to plot a filled rect
+3010 DEF PROCfilledRect(x%,y%,w%,h%,c%)
 3020 GCOL 0,c%
 3030 MOVE x%,y% 
-3040 MOVE x%+w%,y% : PLOT 80, x%+w%, y%+h%
-3050 MOVE x%, y%+h% : PLOT 80, x%, y%
+3040 REM MOVE x%+w%,y% : PLOT 85, x%+w%, y%+h%
+3050 REM MOVE x%, y%+h% : PLOT 85, x%, y%
+3055 PLOT 101, x%+w%, y%+h%
 3060 ENDPROC
 
-3100 REM PROCRect draw a rectangle
+3100 REM PROCrect draw a rectangle
 3101 REM assume screen scaling OFF
-3110 DEF PROCRect(x%,y%,w%,h%,c%)
+3110 DEF PROCrect(x%,y%,w%,h%,c%)
 3120 GCOL 0,c%
 3130 MOVE x%,y% 
 3140 DRAW x%+w%,y% 
