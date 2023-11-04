@@ -9,6 +9,8 @@ sped.bas is a simple sprite editor.
 Work in progress
 Currently works in mode 8 with 64 colours and only works with a single frame of a 16x16 sprite/bitmap
 
+![sped screenshot](SpriteEditor_v0.5.png "Sprite Editor screenshot v0.5")
+
 ## mode3_cols
 mode3_cols.bas 
 Shows all the colours available in MODE8 (and any 64 colour mode)
