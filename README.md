@@ -21,3 +21,15 @@ Primarily to see how the colour codes map in each of the modes.
 ## stars
 stars.bas
 Vertical scrolling stars in basic using double buffered mode
+
+## Bitmap/Sprite tests/investigation
+All of these were created to test the Adjust function of the buffered API, however to date I can't get any of them working.
+
+### bitmap.bas 
+create single colour bitmap, show and attempt adjust
+
+### bm_buff.bas 
+as bitmap.bas but try creating the buffer/bitmap using the buffer API
+
+### modsprite.bas
+Create sprite, modify using buffered API
