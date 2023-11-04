@@ -1,5 +1,5 @@
 10 REM Sprite editor
-15 VERSION$="v0.4"
+15 VERSION$="v0.5"
 20 ON ERROR GOTO 5000
 23 REM memory - just for file load at the moment
 25 DIM graphics 1024
