@@ -192,7 +192,11 @@
 2090 ENDPROC
 
 2100 DEF PROCsaveFile
-2110 IF FILENAME$="" THEN PROCgetSaveFilename
+2110 PROCgetSaveFilename
+2120 FHAN%=OPENOUT(FILENAME$)
+2130 REM need an exists/overwrite dialog ...
+2140 REM IF FHAN% > 0 THEN .... 
+2150 PROCsaveDataFile(FHAN%)
 2190 ENDPROC
 
 2200 DEF PROCgetSaveFilename
@@ -207,8 +211,8 @@
 2320 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
 2330 COLOUR 15 : INPUT FILENAME$;
 2340 FHAN%=OPENIN(FILENAME$)
-2350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; :FILENAME$="":ENDPROC
-2360 FLEN%=EXT#FHAN% : IF FLEN%<>768 THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";:FILENAME$="":ENDPROC
+2350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; :FILENAME$="": ENDPROC
+2360 FLEN%=EXT#FHAN% : IF FLEN%<>768 THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";:FILENAME$="": CLOSE#FHAN%: ENDPROC
 2370 CLOSE#FHAN% : PROCloadDataFile(FHAN%)
 2390 ENDPROC
 
@@ -224,14 +228,24 @@
 2520 DATR% = ?(graphics+I%*3+0) DIV 85
 2530 DATG% = ?(graphics+I%*3+1) DIV 85
 2540 DATB% = ?(graphics+I%*3+2) DIV 85
-2550 IND% = DATR% * 16 + DATG% * 4 + DATB%
-2560 col% = REVLU%(IND%)
+2550 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
+2560 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
 2570 G%(I%) = col% : x%=I% MOD W% : y%=I% DIV W%
 2580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
 2590 NEXT I%
 2600 PROCdrawgrid(W%,H%,GRIDX%,GRIDY%)
 2610 PROCshowSprite
 2690 ENDPROC
+
+2700 DEF PROCsaveDataFile(h%)
+2710 FOR I%=0 TO (W%*H%)-1
+2720 RGBIndex% = CL%(G%(I%)) : REM lookup the RGB colour index for this colour 
+2730 BPUT#h%, RGB%(RGBIndex%*3)
+2740 BPUT#h%, RGB%(RGBIndex%*3+1)
+2750 BPUT#h%, RGB%(RGBIndex%*3+2)
+2760 NEXT
+2770 CLOSE#h%
+2790 ENDPROC
 
 3000 REM PROCfilledRect draw a filled rectangle
 3001 REM assume screen scaling OFF
