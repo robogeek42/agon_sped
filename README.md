@@ -33,3 +33,6 @@ as bitmap.bas but try creating the buffer/bitmap using the buffer API
 
 ### modsprite.bas
 Create sprite, modify using buffered API
+
+### ms.bas
+As above but try only using the buffered API functions
