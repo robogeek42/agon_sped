@@ -1,24 +1,33 @@
 10 REM Sprite editor
-15 VERSION$="v0.6"
+15 VERSION$="v0.7"
 20 ON ERROR GOTO 5000
 23 REM memory - just for file load at the moment
 25 DIM graphics 1024
 27 MB%=&40000
 30 MODE 8
-40 SW%=320 : SH%=240
-50 COL%=3
-60 GRIDX%=16 : GRIDY%=16 : W%=16 : H%=16
-70 DIM G%(W%*H%) : FOR I%=0 TO W%*H%-1 : G%(I%)=0
-75 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
-79 REM palette x/y and sprite x/y positions on screen
-80 PALX%=160 : PALY%=16 : SPX%=16 : SPY%=160
-85 PX%=0 : PY%=0 : REM selected palette position
-90 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
-100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
-110 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
-120 FILENAME$="" : FLINE%=24
-130 PROCcreateSprite(W%,H%)
-140 PROCdrawScreen
+35 SW%=320 : SH%=240
+40 COL%=3
+45 GRIDX%=16 : GRIDY%=16 : W%=16 : H%=16
+50 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
+55 DIM G%(W%*H%) : FOR I%=0 TO W%*H%-1 : G%(I%)=0
+60 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
+
+69 REM palette x/y and sprite x/y positions on screen
+70 PALX%=160 : PALY%=16 : SPX%=20 : SPY%=156
+75 PX%=0 : PY%=0 : REM selected palette position
+
+80 REM multi-bitmap sprite setup
+85 NumBitmaps% = 4 : BM% = 0 : REM Current bitmap
+
+90 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
+100 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
+110 FILENAME$="" : FLINE%=24
+
+130 FOR S%=1 TO NumBitmaps%
+140 PROCcreateSprite(W%,H%, S%)
+150 NEXT
+160 PROCdrawScreen
+
 200 REM Main Loop
 210 REPEAT
 220 key=INKEY(0)
@@ -48,8 +57,9 @@
 450 REM V=save L=load
 460 IF key = 118 THEN PROCsaveFile : REM V=saVe file 
 470 IF key = 108 THEN PROCloadFile
+475 IF key = 109 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes
 480 PROCprintColour(27,2)
-490 IF UPDATESPRITE=1 THEN PROCshowSprite
+490 IF UPDATESPRITE=1 THEN PROCshowSpriteBitmap(BM%)
 500 PROCgridCursor(1)
 600 UNTIL ISEXIT = 1
 610 GOTO 5000
@@ -62,11 +72,11 @@
 720 VDU 23,0,192,0 : REM turn off logical screen scaling
 730 VDU 23, 1, 0 : REM disable text cursor
 740 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-750 PROCdrawPalette(PALX%,PALY%)
-760 PROCselectPaletteCol(1)
-770 PROCprintColour(27,2)
-780 PROCgridCursor(1)
-790 PROCrect(SPX%-2, SPY%-2, W%+3, H%+3, GRIDCOL%)
+745 PROCdrawPalette(PALX%,PALY%)
+750 PROCselectPaletteCol(1)
+755 PROCprintColour(27,2)
+760 PROCgridCursor(1)
+770 PROCdrawBitmapBoxes
 800 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
 810 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
 814 COLOUR 8:PRINT TAB(27,0);VERSION$;
@@ -79,8 +89,8 @@
 870 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
 880 COLOUR 21 : PRINT TAB(18,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
 890 COLOUR 21 : PRINT TAB(18,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
-900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"Exit";
-910 COLOUR 21 : PRINT TAB(30,28);"V";     :COLOUR 19:PRINT TAB(33,28);"Save";
+900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
+910 COLOUR 21 : PRINT TAB(30,28);"V";     :COLOUR 19:PRINT TAB(33,28);"saVe";
 920 COLOUR 21 : PRINT TAB(30,29);"L";     :COLOUR 19:PRINT TAB(33,29);"Load";
 930 PROCshowFilename
 980 COLOUR 15
@@ -98,6 +108,15 @@
 1075 PLOT 5, x%+X%*8, y%+h%*8
 1080 NEXT
 1090 ENDPROC
+
+1100 DEF PROCdrawBitmapBoxes
+1105 REM bitmap boxes, highlight selected
+1110 FOR S%=0 TO NumBitmaps%-1
+1120 IF S% = BM% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
+1130 PROCrect(SPX%-2+24*S%, SPY%-2, W%+3, H%+3, gc%)
+1140 COLOUR 19: PRINT TAB(3+3*S%,22);S%+1;
+1150 NEXT
+1190 ENDPROC
 
 1200 DEF PROCdrawPalette(x%,y%)
 1210 REM draw palette colours - 4 cols of 16
@@ -141,30 +160,31 @@
 1680 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
 1690 ENDPROC
 
-1700 DEF PROCcreateSprite(w,h)
+1700 DEF PROCcreateSprite(w,h, bmnum%)
 1710 REM setup the sprite and bitmap
-1720 VDU 23,27,0,0: REM Select bitmap 0
+1720 VDU 23,27,0,bmnum%: REM Select bitmap bmnum%
 1725 VDU 23,27,1,w;h;
 1730 FOR I%=1 TO w*h : VDU 0,0,0,1 : NEXT
-1740 VDU 23,27,4,0: REM Select sprite 0
-1745 VDU 23,27,5: REM Clear frames for current sprite
-1750 VDU 23,27,6,0: REM Add bitmap 0 as frame 0 of sprite
-1755 VDU 23,27,11: REM Show the sprite
-1760 VDU 23,27,7,1 : REM activate 1 sprite
-1770 VDU 23,27,4,0,23,27,13,SPX%; SPY%;
+1740 VDU 23,27,4,0      : REM Select sprite 0
+1745 VDU 23,27,5        : REM Clear frames for current sprite
+1750 VDU 23,27,6,bmnum% : REM Add bitmap n as nextframe of sprite
+1755 VDU 23,27,11       : REM Show the sprite
+1760 VDU 23,27,7,1      : REM activate 1 sprite
+1770 VDU 23,27,4,0,23,27,13,SPX%; SPY%; : REM display sprite
 1790 ENDPROC
 
-1800 DEF PROCshowSprite
+1800 DEF PROCshowSpriteBitmap(bmnum%)
 1810 REM show sprite
 1814 REM currently copies all data from grid to sprite
 1815 REM this is slow - TODO do this in Z80 asm to speed up
-1820 VDU 23,27,0,0: REM Select bitmap 0
-1825 VDU 23,27,1,W%;H%;
+1820 VDU 23,27,0,bmnum%   : REM Select bitmap n
+1825 VDU 23,27,1,W%;H%;   : REM load sprite data
 1830 FOR I%=0 TO W%*H%-1
-1840 clu%=CL%(G%(I%))
-1850 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
-1870 NEXT
-1880 VDU 23,27,4,0,23,27,13,SPX%; SPY%;
+1835 clu%=CL%(G%(I%))     : REM lookup RGB index
+1840 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
+1845 NEXT
+1850 VDU 23,27,4,0,23,27,13,SPX%; SPY%; : REM display sprite
+1860 VDU 23,27,4,1,23,27,13,SPX%; SPY%; : REM display sprite
 1890 ENDPROC
 
 1900 DEF PROCprintColour(x%,y%)
@@ -242,7 +262,7 @@
 2580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
 2590 NEXT I%
 2600 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-2610 PROCshowSprite
+2610 PROCshowSpriteBitmap(BM%)
 2690 ENDPROC
 
 2700 DEF PROCsaveDataFile(h%)
