@@ -1,3 +1,4 @@
+5 ON ERROR GOTO 1000
    10 REM Stars - vertical scroll. Double buffered mode
    20 REM Assif Mirza
    30 MODE 136 : REM 320x240, 40x30, 64 colours - use double buffered screen MODE 128+8
@@ -39,3 +40,6 @@
   390 SPOS%(NS%,0) = RND(SCRW%) - 1
   400 REM Keep same star type
   410 ENDPROC
+
+1000 MODE 0
+
