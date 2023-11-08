@@ -1,6 +1,6 @@
 10 REM Sprite editor
 15 VERSION$="v0.7"
-20 ON ERROR GOTO 5000
+20 ON ERROR GOTO 10000
 23 REM memory - just for file load at the moment
 25 DIM graphics 1024
 27 MB%=&40000
@@ -9,23 +9,33 @@
 40 COL%=3
 45 GRIDX%=16 : GRIDY%=16 : W%=16 : H%=16
 50 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
-55 DIM G%(W%*H%) : FOR I%=0 TO W%*H%-1 : G%(I%)=0
 60 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
 
 69 REM palette x/y and sprite x/y positions on screen
-70 PALX%=160 : PALY%=16 : SPX%=20 : SPY%=156
+70 PALX%=160 : PALY%=16 : SPX%=130 : SPY%=156
 75 PX%=0 : PY%=0 : REM selected palette position
 
 80 REM multi-bitmap sprite setup
 85 NumBitmaps% = 4 : BM% = 0 : REM Current bitmap
+86 DIM BMX%(NumBitmaps%), BMY%(NumBitmaps%)
+88 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=20 + 24*I% : BMY%(I%)=156 : NEXT
 
-90 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
-100 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
-110 FILENAME$="" : FLINE%=24
+90 REM data for grid
+91 REM PRINT "Initialise Grid data"
+92 DIM G%(W%*H%, NumBitmaps%) 
+94 FOR B%=0 TO NumBitmaps%-1
+96 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : NEXT I%
+98 NEXT B%
+
+
+100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
+110 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
+120 FILENAME$="" : FLINE%=24
 
 130 FOR S%=1 TO NumBitmaps%
 140 PROCcreateSprite(W%,H%, S%)
 150 NEXT
+155 CLS
 160 PROCdrawScreen
 
 200 REM Main Loop
@@ -113,7 +123,7 @@
 1105 REM bitmap boxes, highlight selected
 1110 FOR S%=0 TO NumBitmaps%-1
 1120 IF S% = BM% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
-1130 PROCrect(SPX%-2+24*S%, SPY%-2, W%+3, H%+3, gc%)
+1130 PROCrect(BMX%(S%)-2, BMY%(S%)-2, W%+3, H%+3, gc%)
 1140 COLOUR 19: PRINT TAB(3+3*S%,22);S%+1;
 1150 NEXT
 1190 ENDPROC
@@ -145,7 +155,7 @@
 
 1500 REM set colour in grid
 1510 DEF PROCsetCol(x%,y%,c%)
-1520 G%(x%+y%*W%)=c%
+1520 G%(x%+y%*W%, BM%)=c%
 1530 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
 1590 ENDPROC
 
@@ -153,7 +163,7 @@
 1610 REM clear grid to a colour
 1620 FOR i%=0 TO W%-1
 1630 FOR j%=0 TO H%-1
-1640 G%(i%+j%*W%)=col%
+1640 G%(i%+j%*W%, BM%)=col%
 1650 NEXT 
 1660 NEXT
 1670 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
@@ -178,13 +188,13 @@
 1814 REM currently copies all data from grid to sprite
 1815 REM this is slow - TODO do this in Z80 asm to speed up
 1820 VDU 23,27,0,bmnum%   : REM Select bitmap n
-1825 VDU 23,27,1,W%;H%;   : REM load sprite data
+1825 VDU 23,27,1,W%;H%;   : REM load data
 1830 FOR I%=0 TO W%*H%-1
-1835 clu%=CL%(G%(I%))     : REM lookup RGB index
+1835 clu%=CL%(G%(I%, BM%))     : REM lookup RGB index
 1840 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
 1845 NEXT
-1850 VDU 23,27,4,0,23,27,13,SPX%; SPY%; : REM display sprite
-1860 VDU 23,27,4,1,23,27,13,SPX%; SPY%; : REM display sprite
+1850 REM VDU 23,27,4,0,23,27,13,SPX%; SPY%; : REM display sprite
+1860 VDU 23,27,3,BMX%(bmnum%);BMY%(bmnum%);
 1890 ENDPROC
 
 1900 DEF PROCprintColour(x%,y%)
@@ -214,134 +224,139 @@
 2040 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
 2090 ENDPROC
 
-2100 DEF PROCsaveFile
-2105 REM ask for a filename and save the data in RGB raw format with no headers
-2110 PROCgetSaveFilename
-2120 FHAN%=OPENOUT(FILENAME$)
-2130 REM need an exists/overwrite dialog ...
-2140 REM IF FHAN% > 0 THEN .... 
-2150 PROCsaveDataFile(FHAN%)
-2190 ENDPROC
+3100 DEF PROCsaveFile
+3105 REM ask for a filename and save the data in RGB raw format with no headers
+3110 PROCgetSaveFilename
+3120 FHAN%=OPENOUT(FILENAME$)
+3130 REM need an exists/overwrite dialog ...
+3140 REM IF FHAN% > 0 THEN .... 
+3150 PROCsaveDataFile(FHAN%)
+3190 ENDPROC
 
-2200 DEF PROCgetSaveFilename
-2205 REM ask for a filename
-2210 PRINT TAB(0,FLINE%);SPC(39);
-2220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-2230 COLOUR 15 : INPUT FILENAME$;
-2240 PROCshowFilename
-2290 ENDPROC
+3200 DEF PROCgetSaveFilename
+3205 REM ask for a filename
+3210 PRINT TAB(0,FLINE%);SPC(39);
+3220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+3230 COLOUR 15 : INPUT FILENAME$;
+3240 PROCshowFilename
+3290 ENDPROC
 
-2300 DEF PROCloadFile
-2305 REM ask for a filename, and call load routine 
-2310 PRINT TAB(0,FLINE%);SPC(39);
-2320 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-2330 COLOUR 15 : INPUT FILENAME$;
-2340 FHAN%=OPENIN(FILENAME$)
-2350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; :FILENAME$="": ENDPROC
-2360 FLEN%=EXT#FHAN% : IF FLEN%<>768 THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";:FILENAME$="": CLOSE#FHAN%: ENDPROC
-2370 CLOSE#FHAN% : PROCloadDataFile(FHAN%)
-2390 ENDPROC
+3300 DEF PROCloadFile
+3305 REM ask for a filename, and call load routine 
+3310 PRINT TAB(0,FLINE%);SPC(39);
+3320 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+3330 COLOUR 15 : INPUT FILENAME$;
+3340 FHAN%=OPENIN(FILENAME$)
+3350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; :FILENAME$="": ENDPROC
+3360 FLEN%=EXT#FHAN% : IF FLEN%<>768 THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";:FILENAME$="": CLOSE#FHAN%: ENDPROC
+3370 CLOSE#FHAN% : PROCloadDataFile(FHAN%)
+3390 ENDPROC
 
-2400 DEF PROCshowFilename
-2405 REM just display filename in status bar
-2410 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
-2420 PRINT TAB(0,FLINE%);SPC(39);
-2430 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);FILENAME$;
-2490 ENDPROC
+3400 DEF PROCshowFilename
+3405 REM just display filename in status bar
+3410 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
+3420 PRINT TAB(0,FLINE%);SPC(39);
+3430 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);FILENAME$;
+3490 ENDPROC
 
-2500 DEF PROCloadDataFile(h%)
-2501 REM this loads file to internal memory and copies it out to the sprite
-2505 OSCLI("LOAD " + FILENAME$ + " " + STR$(MB%+graphics))
-2510 FOR I%=0 TO (W%*H%)-1
-2520 DATR% = ?(graphics+I%*3+0) DIV 85
-2530 DATG% = ?(graphics+I%*3+1) DIV 85
-2540 DATB% = ?(graphics+I%*3+2) DIV 85
-2550 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
-2560 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
-2570 G%(I%) = col% : x%=I% MOD W% : y%=I% DIV W%
-2580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
-2590 NEXT I%
-2600 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-2610 PROCshowSpriteBitmap(BM%)
-2690 ENDPROC
+3500 DEF PROCloadDataFile(h%)
+3501 REM this loads file to internal memory and copies it out to the sprite
+3505 OSCLI("LOAD " + FILENAME$ + " " + STR$(MB%+graphics))
+3510 FOR I%=0 TO (W%*H%)-1
+3520 DATR% = ?(graphics+I%*3+0) DIV 85
+3530 DATG% = ?(graphics+I%*3+1) DIV 85
+3540 DATB% = ?(graphics+I%*3+2) DIV 85
+3550 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
+3560 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
+3570 G%(I%, BM%) = col% : x%=I% MOD W% : y%=I% DIV W%
+3580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+3590 NEXT I%
+3600 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+3610 PROCshowSpriteBitmap(BM%)
+3690 ENDPROC
 
-2700 DEF PROCsaveDataFile(h%)
-2705 REM save raw data to a file. RGB format with no header.
-2710 FOR I%=0 TO (W%*H%)-1
-2720 RGBIndex% = CL%(G%(I%)) : REM lookup the RGB colour index for this colour 
-2730 BPUT#h%, RGB%(RGBIndex%*3)
-2740 BPUT#h%, RGB%(RGBIndex%*3+1)
-2750 BPUT#h%, RGB%(RGBIndex%*3+2)
-2760 NEXT
-2770 CLOSE#h%
-2790 ENDPROC
+3700 DEF PROCsaveDataFile(h%)
+3705 REM save raw data to a file. RGB format with no header.
+3710 FOR I%=0 TO (W%*H%)-1
+3720 RGBIndex% = CL%(G%(I%, BM%)) : REM lookup the RGB colour index for this colour 
+3730 BPUT#h%, RGB%(RGBIndex%*3)
+3740 BPUT#h%, RGB%(RGBIndex%*3+1)
+3750 BPUT#h%, RGB%(RGBIndex%*3+2)
+3760 NEXT
+3770 CLOSE#h%
+3790 ENDPROC
 
-3000 DEF PROCfilledRect(x%,y%,w%,h%,c%)
-3010 REM PROCfilledRect draw a filled rectangle
-3011 REM assume screen scaling OFF
-3012 REM update for basic 3.00, use 85 to plot a triangle, or 101 to plot a filled rect
-3020 GCOL 0,c%
-3030 MOVE x%,y% 
-3040 REM MOVE x%+w%,y% : PLOT 85, x%+w%, y%+h%
-3050 REM MOVE x%, y%+h% : PLOT 85, x%, y%
-3055 PLOT 101, x%+w%, y%+h%
-3060 ENDPROC
+5000 REM ------- Generic Functions ------------
 
-3100 DEF PROCrect(x%,y%,w%,h%,c%)
-3110 REM PROCrect draw a rectangle. assume screen scaling is OFF
-3120 GCOL 0,c%
-3130 MOVE x%,y% 
-3140 DRAW x%+w%,y% 
-3150 DRAW x%+w%, y%+h%
-3160 DRAW x%, y%+h% 
-3170 DRAW x%, y%
-3180 ENDPROC
+5010 DEF PROCfilledRect(x%,y%,w%,h%,c%)
+5005 REM PROCfilledRect draw a filled rectangle
+5011 REM assume screen scaling OFF
+5012 REM update for basic 3.00, use 85 to plot a triangle, or 101 to plot a filled rect
+5020 GCOL 0,c%
+5030 MOVE x%,y% 
+5040 REM MOVE x%+w%,y% : PLOT 85, x%+w%, y%+h%
+5050 REM MOVE x%, y%+h% : PLOT 85, x%, y%
+5055 PLOT 101, x%+w%, y%+h%
+5060 ENDPROC
 
-4000 DEF PROCloadLUT
-4010 REM Load the RGB Look up table
-4011 REM CL%() is BBC Col to RGBIndex
-4012 REM RGB%() is a packed array of the RGB colours
-4013 REM REVLU%() is a reverse lookup table to get the colour  
-4025 RESTORE
-4030 FOR I%=0 TO 63 
-4040 READ CL%(I%)
-4050 NEXT
-4060 FOR I%=0 TO 63
-4070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2),REVLU%(I%)
-4080 NEXT
-4090 ENDPROC
+5100 DEF PROCrect(x%,y%,w%,h%,c%)
+5110 REM PROCrect draw a rectangle. assume screen scaling is OFF
+5120 GCOL 0,c%
+5130 MOVE x%,y% 
+5140 DRAW x%+w%,y% 
+5150 DRAW x%+w%, y%+h%
+5160 DRAW x%, y%+h% 
+5170 DRAW x%, y%
+5180 ENDPROC
 
-4200 REM Colour mapping to RGB 
-4210 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
-4220 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
-4230 DATA &01, &04, &05, &06, &07, &09, &0B, &0D
-4240 DATA &0E, &10, &11, &12, &13, &14, &16, &17
-4250 DATA &18, &19, &1A, &1B, &1C, &1D, &1E, &1F
-4260 DATA &21, &23, &24, &25, &26, &27, &29, &2B
-4270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
-4280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
-4300 REM - RGB colours with a reverse map
-4310 DATA &00, &00, &00,  0, &00, &00, &55, 16, &00, &00, &AA,  4, &00, &00, &FF, 12
-4320 DATA &00, &55, &00, 17, &00, &55, &55, 18, &00, &55, &AA, 19, &00, &55, &FF, 20
-4330 DATA &00, &AA, &00,  2, &00, &AA, &55, 21, &00, &AA, &AA,  6, &00, &AA, &FF, 22
-4340 DATA &00, &FF, &00, 10, &00, &FF, &55, 23, &00, &FF, &AA, 24, &00, &FF, &FF, 14
-4350 DATA &55, &00, &00, 25, &55, &00, &55, 26, &55, &00, &AA, 27, &55, &00, &FF, 28
-4360 DATA &55, &55, &00, 29, &55, &55, &55,  8, &55, &55, &AA, 30, &55, &55, &FF, 31
-4370 DATA &55, &AA, &00, 32, &55, &AA, &55, 33, &55, &AA, &AA, 34, &55, &AA, &FF, 35
-4380 DATA &55, &FF, &00, 36, &55, &FF, &55, 37, &55, &FF, &AA, 38, &55, &FF, &FF, 39
-4390 DATA &AA, &00, &00,  1, &AA, &00, &55, 40, &AA, &00, &AA,  5, &AA, &00, &FF, 41
-4400 DATA &AA, &55, &00, 42, &AA, &55, &55, 43, &AA, &55, &AA, 44, &AA, &55, &FF, 45
-4410 DATA &AA, &AA, &00,  3, &AA, &AA, &55, 46, &AA, &AA, &AA,  7, &AA, &AA, &FF, 47
-4420 DATA &AA, &FF, &00, 48, &AA, &FF, &55, 49, &AA, &FF, &AA, 50, &AA, &FF, &FF, 51
-4430 DATA &FF, &00, &00,  9, &FF, &00, &55, 52, &FF, &00, &AA, 53, &FF, &00, &FF, 13
-4440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
-4450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
-4460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
+6000 REM ------- Colour lookup Functions ------------
+6005 :
 
-5000 REM Error Handling
-5010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
-5020 VDU 23, 1, 1 : REM enable text cursor
-5030 COLOUR 15
-5030 IF ISEXIT=0 PRINT:REPORT:PRINT " at line ";ERL:END
-5040 PRINT "Goodbye"
+6010 DEF PROCloadLUT
+6011 REM Load the RGB Look up table
+6012 REM CL%() is BBC Col to RGBIndex
+6013 REM RGB%() is a packed array of the RGB colours
+6014 REM REVLU%() is a reverse lookup table to get the colour  
+6020 RESTORE
+6030 FOR I%=0 TO 63 
+6040 READ CL%(I%)
+6050 NEXT
+6060 FOR I%=0 TO 63
+6070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2),REVLU%(I%)
+6080 NEXT
+6090 ENDPROC
+
+6200 REM Colour mapping to RGB 
+6210 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
+6220 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
+6230 DATA &01, &04, &05, &06, &07, &09, &0B, &0D
+6240 DATA &0E, &10, &11, &12, &13, &14, &16, &17
+6250 DATA &18, &19, &1A, &1B, &1C, &1D, &1E, &1F
+6260 DATA &21, &23, &24, &25, &26, &27, &29, &2B
+6270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
+6280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
+6300 REM - RGB colours with a reverse map
+6310 DATA &00, &00, &00,  0, &00, &00, &55, 16, &00, &00, &AA,  4, &00, &00, &FF, 12
+6320 DATA &00, &55, &00, 17, &00, &55, &55, 18, &00, &55, &AA, 19, &00, &55, &FF, 20
+6330 DATA &00, &AA, &00,  2, &00, &AA, &55, 21, &00, &AA, &AA,  6, &00, &AA, &FF, 22
+6340 DATA &00, &FF, &00, 10, &00, &FF, &55, 23, &00, &FF, &AA, 24, &00, &FF, &FF, 14
+6350 DATA &55, &00, &00, 25, &55, &00, &55, 26, &55, &00, &AA, 27, &55, &00, &FF, 28
+6360 DATA &55, &55, &00, 29, &55, &55, &55,  8, &55, &55, &AA, 30, &55, &55, &FF, 31
+6370 DATA &55, &AA, &00, 32, &55, &AA, &55, 33, &55, &AA, &AA, 34, &55, &AA, &FF, 35
+6380 DATA &55, &FF, &00, 36, &55, &FF, &55, 37, &55, &FF, &AA, 38, &55, &FF, &FF, 39
+6390 DATA &AA, &00, &00,  1, &AA, &00, &55, 40, &AA, &00, &AA,  5, &AA, &00, &FF, 41
+6400 DATA &AA, &55, &00, 42, &AA, &55, &55, 43, &AA, &55, &AA, 44, &AA, &55, &FF, 45
+6410 DATA &AA, &AA, &00,  3, &AA, &AA, &55, 46, &AA, &AA, &AA,  7, &AA, &AA, &FF, 47
+6420 DATA &AA, &FF, &00, 48, &AA, &FF, &55, 49, &AA, &FF, &AA, 50, &AA, &FF, &FF, 51
+6430 DATA &FF, &00, &00,  9, &FF, &00, &55, 52, &FF, &00, &AA, 53, &FF, &00, &FF, 13
+6440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
+6450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
+6460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
+
+10000 REM  ------------ Error Handling -------------
+10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
+10020 VDU 23, 1, 1 : REM enable text cursor
+10030 COLOUR 15
+10030 IF ISEXIT=0 PRINT:REPORT:PRINT " at line ";ERL:END
+10040 PRINT "Goodbye"
 
