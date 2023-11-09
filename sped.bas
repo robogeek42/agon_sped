@@ -30,13 +30,17 @@
 
 130 REM declare data for grid
 135 DIM G%(W%*H%, NumBitmaps%) 
-140 FOR B%=0 TO NumBitmaps%-1
-145 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=B%+1 : NEXT I%
-150 NEXT B%
 
-160 PROCcreateSprite(W%,H%)
-170 PROCdrawScreen
+140 PROCdrawScreen
+150 PROCcreateSprite(W%,H%)
+
+160 FOR B%=0 TO NumBitmaps%-1
+165 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=B%+1 : NEXT I%
+170 NEXT B%
+
 180 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
+190 PROCupdateScreenGrid(BM%)
+195 STOP
 
 200 REM Main Loop
 210 REPEAT
@@ -70,7 +74,6 @@
 480 IF key = 109 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
 490 IF key = 110 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
 500 IF key = 110 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-510 PROCprintColour(27,2)
 520 IF UPDATEBITMAP=1 THEN PROCupdateBitmapFromGrid(BM%)
 530 PROCgridCursor(1)
 
@@ -160,6 +163,7 @@
 1340 COL%=c%
 1350 x% = COL% DIV 16 : y% = COL% MOD 16
 1360 PROCrect(PALX%+x%*10, PALY%+y%*10, 8, 8, 15)
+1365 PROCprintColour(27,2)
 1370 ENDPROC
 
 1400 DEF PROCgridCursor(switch%)
@@ -194,7 +198,7 @@
 1655 REM set colour in screen grid AND Data Grid G%
 1660 G%(x%+y%*W%, BM%)=c%
 1670 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
-1680 PROCupdateBitmapFromGrid(BM%) : REM whole bitmap for now
+1680 REM PROCupdateBitmapFromGrid(BM%) : REM whole bitmap for now
 1690 ENDPROC
 
 1700 DEF PROCclearGrid(col%, bmap%)
@@ -233,42 +237,46 @@
 
 2099 REM ------ Sprite Functions -----------------------------
 
-2100 DEF PROCcreateSprite(w,h)
+2100 DEF PROCcreateSprite(w%,h%)
 2102 REM setup the sprite and bitmap. Clear both grids
-2105 LOCAL S%
-2110 VDU 23,27,4,0      : REM Select sprite 0
-2115 VDU 23,27,5        : REM Clear frames for current sprite
-2120 FOR S%=1 TO NumBitmaps%
-2130 VDU 23,27,0,S% : REM Select bitmap bmnum%
-2140 VDU 23,27,2,w;h;0;0; : REM create empty (black) bitmap
-2150 VDU 23,27,6,S%       : REM Add bitmap n as nextframe of sprite
-2155 NEXT S%
-2160 VDU 23,27,11       : REM Show the sprite
-2165 VDU 23,27,7,1      : REM activate 1 sprite
-2170 VDU 23,27,4,0,23,27,13,SPX%; SPY%; : REM display sprite
-2175 FOR S%=1 TO NumBitmaps%  
-2180 PROCclearGrid(0, S%)
-2185 NEXT S%
+2105 LOCAL B%
+2110 FOR B%=0 TO NumBitmaps%-1
+2115 VDU 23,27,0,B%       : REM Select bitmap bmnum%
+2120 VDU 23,27,2,w%;h%;&FFFF;&FFFF; : REM create empty (black) bitmap
+2125 NEXT B%
+2130 VDU 23,27,4,0        : REM Select sprite 0
+2135 VDU 23,27,5          : REM Clear frames for current sprite
+2140 FOR B%=0 TO NumBitmaps%-1
+2145 VDU 23,27,6,B%       : REM Add bitmap n as a frame of sprite
+2150 NEXT B%
+2160 VDU 23,27,11         : REM Show the sprite
+2165 VDU 23,27,7,1        : REM activate 1 sprite
+2170 VDU 23,27,13,SPX%; SPY%; : REM display sprite
 2190 ENDPROC
 
 2200 DEF PROCupdateSpriteBitmap(bmap%)
 2205 REM display bitmap and update sprite with bitmap
-2220 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
-2230 VDU 23,27,10,bmap% : REM select sprite frame bmnum%
-2240 VDU 23,27,6,bmap% : REM add bitmap to sprite
-2250 VDU 23,27,15: REM Refresh the sprites
+2206 VDU 23,27,0,bmap%
+2210 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
+2220 REM VDU 23,27,10,bmap% : REM select sprite frame
+2230 REM VDU 23,27,6,bmap% : REM add bitmap to sprite
+2240 VDU 23,27,15: REM Refresh the sprites
+2250 REM VDU 23,27,11         : REM Show the sprite
+2260 REM VDU 23,27,7,1        : REM activate 1 sprite
+2270 REM VDU 23,27,13,SPX%; SPY%; : REM display sprite
 2290 ENDPROC
 
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
 2307 REM update frame number every N screen refreshes
-2310 VDU 23,27,4,0,23,27,13,SPX%; SPY%; : REM display sprite
-2315 Ctr% = Ctr% - 1
+2310 Ctr% = Ctr% - 1
 2320 REM IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
 2330 REM VDU 23,27,10,SF% : REM select frame
 2335 IF Ctr%=0 THEN Ctr%=Delay% : VDU 23,27,8 : REM select next frame
-2345 REM *FX 19 : REM wait for refresh
-2350 VDU 23,27,15 : REM update sprites
+2340 REM *FX 19 : REM wait for refresh
+2345 VDU 23,27,15 : REM update sprites
+2360 REM VDU 23,27,13,SPX%; SPY%; : REM display sprite
+2370 REM VDU 23,27,11       : REM Show the sprite
 2390 ENDPROC 
 
 3099 REM ------ File Handling --------------------------------
@@ -406,6 +414,6 @@
 10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
 10020 VDU 23, 1, 1 : REM enable text cursor
 10030 COLOUR 15
-10030 IF ISEXIT=0 PRINT:REPORT:PRINT " at line ";ERL:END
-10040 PRINT "Goodbye"
+10040 IF ISEXIT=0 PRINT:REPORT:PRINT " @ line ";ERL:END
+10050 PRINT "Goodbye"
 
