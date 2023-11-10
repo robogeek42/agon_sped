@@ -1,4 +1,5 @@
-10 REM Sprite editor
+10 REM Sprite editor for the Agon Light and Console 8
+11 REM NOTE: Requires VDP version 2.0.1+ for the bitmap backed sprite function
 15 VERSION$="v0.7"
 20 ON ERROR GOTO 10000
 23 REM memory - just for file load at the moment
@@ -35,20 +36,15 @@
 150 PROCcreateSprite(W%,H%)
 
 160 FOR B%=0 TO NumBitmaps%-1
-165 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=B%+1 : NEXT I%
+165 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : NEXT I%
 170 NEXT B%
 
 180 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
-190 PROCupdateScreenGrid(BM%)
+190 REM PROCupdateScreenGrid(BM%)
 
 200 REM Main Loop
 210 REPEAT
 220 key=INKEY(0)
-225 UPDATEBITMAP=0
-230 REM IF key > -1 PRINT TAB(0,0);"     ": PRINT TAB(0,0);key
-240 REM left=8, right=21, up=11, down=10, tab=9, nums 0=48 ... 9=57
-250 REM q=110, x=120, s=115, spc=32, w,a,s,d = 119,97,115,100
-260 REM a=97 ... z=122, ","=44, "."=46  backspace=127 c=99
 270 IF key=-1 GOTO 600 : REM skip to Until
 280 PROCgridCursor(0)
 290 IF key = 120 ISEXIT=1 : REM x=exit
@@ -139,14 +135,12 @@
 
 1150 DEF PROCsetkeys
 1151 REM set the keys used for movment. Put in proc for future customisation opts
-1152 REM arrows left=8, right=21, up=11, down=10
-1153 REM w,a,s,d = w=119(up),a=97(left),s=115(down),d=100(right)
 1160 KEYG(0)=8 : KEYG(1)=21 : KEYG(2)=11 : KEYG(3)=10 
 1170 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
 1180 ENDPROC
 
 1200 DEF PROCdrawPalette(x%,y%)
-1210 REM draw palette colours - 4 cols of 16
+1210 REM draw palette colours - 4 columns of 16
 1220 FOR N%=0 TO 3
 1230 FOR I%=0 TO 15
 1240 PROCfilledRect(1+x%+N%*10,1+y%+I%*10,6,6,I%+N%*16)
@@ -273,7 +267,7 @@
 
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
-2307 REM update frame number every N screen refreshes
+2307 REM update frame number every Delay% screen refreshes
 2310 Ctr% = Ctr% - 1
 2320 IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
 2330 VDU 23,27,10,SF% : REM select frame
