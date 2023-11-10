@@ -1,15 +1,18 @@
 # agon_basic
-Code repo for BBC Basic programs written for the Agon Light (2)
+Code repo for BBC Basic programs written for the Agon Light and Console8
 
 Just a place to save stuff for now.
 I will put individual programs in their own repos if they provei useful.
 
 ## Sprite editor
 sped.bas is a simple sprite editor.
-Work in progress
-Currently works in mode 8 with 64 colours and only works with a single frame of a 16x16 sprite/bitmap
+Work in progress.
+Requires VDP2.0.1 as this enables Bitmapped backed Sprites.
+Currently works in mode 8 with i a 64 colour, 16x16 four-frame sprite.
 
-![sped screenshot](SpriteEditor_v0.5.png "Sprite Editor screenshot v0.5")
+![sped screenshot](SpriteEditor_v0.7.png "Sprite Editor screenshot v0.5")
+
+v0.7 added the animated sprite
 
 ## mode3_cols
 mode3_cols.bas 
