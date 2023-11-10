@@ -40,7 +40,6 @@
 
 180 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
 190 PROCupdateScreenGrid(BM%)
-195 STOP
 
 200 REM Main Loop
 210 REPEAT
@@ -64,17 +63,16 @@
 380 IF key = KEYP(2) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM up
 390 IF key = KEYP(3) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM down
 400 REM space = set colour, backspace = delete (set to 0), f=fill to current col
-410 IF key = 32 THEN PROCsetCol(PX%,PY%,COL%) : UPDATEBITMAP=1
-420 IF key = 127 THEN PROCsetCol(PX%,PY%,0) : UPDATEBITMAP=1
-430 IF key = 99 THEN PROCclearGrid(0, BM%) : UPDATEBITMAP=1
-440 IF key = 102 THEN PROCclearGrid(COL%, BM%) : UPDATEBITMAP=1
+410 IF key = 32 THEN PROCsetCol(PX%,PY%,COL%)
+420 IF key = 127 THEN PROCsetCol(PX%,PY%,0)
+430 IF key = 99 THEN PROCclearGrid(0, BM%)
+440 IF key = 102 THEN PROCclearGrid(COL%, BM%)
 450 REM V=save L=load
 460 IF key = 118 THEN PROCsaveFile : REM V=saVe file 
 470 IF key = 108 THEN PROCloadFile
 480 IF key = 109 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
 490 IF key = 110 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
 500 IF key = 110 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-520 IF UPDATEBITMAP=1 THEN PROCupdateBitmapFromGrid(BM%)
 530 PROCgridCursor(1)
 
 600 REM Nokey GOTO comes here
@@ -198,20 +196,21 @@
 1655 REM set colour in screen grid AND Data Grid G%
 1660 G%(x%+y%*W%, BM%)=c%
 1670 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
-1680 REM PROCupdateBitmapFromGrid(BM%) : REM whole bitmap for now
+1680 PROCupdateBitmapPixel(BM%, x%, y%, c%)
 1690 ENDPROC
 
 1700 DEF PROCclearGrid(col%, bmap%)
 1710 REM clear grid to a colour (Screen and Data Grids)
 1715 REM update of bitmap must be done separately
 1720 FOR i%=0 TO W%-1
-1730 FOR j%=0 TO H%-1
-1740 G%(i%+j%*W%, bmap%)=col%
-1750 NEXT j%
-1760 NEXT i%
-1765 REM fast clear all cells
-1770 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
-1780 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+1725 FOR j%=0 TO H%-1
+1730 G%(i%+j%*W%, bmap%)=col%
+1735 NEXT j%
+1740 NEXT i%
+1745 REM fast clear all cells
+1750 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
+1760 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+1770 PROCupdateBitmapFromGrid(bmap%)
 1790 ENDPROC
 
 1800 DEF PROCupdateScreenGrid(bmap%)
@@ -227,13 +226,24 @@
 1910 REM update bitmap from its data drid
 1915 REM TODO speed up - use memory and precomputed lookup?
 1920 VDU 23,27,0,bmap%   : REM Select bitmap n
-1925 VDU 23,27,1,W%;H%;   : REM load data
+1924 REM Use Adjust Buffer API
+1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;W%*H%*4;
 1930 FOR I%=0 TO W%*H%-1
 1935 clu%=CL%(G%(I%, bmap%))     : REM lookup RGB index
 1940 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
 1945 NEXT
 1950 PROCupdateSpriteBitmap(bmap%)
 1990 ENDPROC
+
+2000 DEF PROCupdateBitmapPixel(bmap%, x%, y%, c%)
+2010 REM update a single bitmap pixel
+2020 VDU 23,27,0,bmap%   : REM Select bitmap n
+2025 REM Use Adjust Buffer API
+2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*W%)*4;4;
+2040 clu%=CL%(c%)     : REM lookup RGB index
+2050 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
+2060 PROCupdateSpriteBitmap(bmap%)
+2090 ENDPROC
 
 2099 REM ------ Sprite Functions -----------------------------
 
@@ -258,22 +268,17 @@
 2205 REM display bitmap and update sprite with bitmap
 2206 VDU 23,27,0,bmap%
 2210 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
-2220 REM VDU 23,27,10,bmap% : REM select sprite frame
-2230 REM VDU 23,27,6,bmap% : REM add bitmap to sprite
 2240 VDU 23,27,15: REM Refresh the sprites
-2250 REM VDU 23,27,11         : REM Show the sprite
-2260 REM VDU 23,27,7,1        : REM activate 1 sprite
-2270 REM VDU 23,27,13,SPX%; SPY%; : REM display sprite
 2290 ENDPROC
 
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
 2307 REM update frame number every N screen refreshes
 2310 Ctr% = Ctr% - 1
-2320 REM IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
-2330 REM VDU 23,27,10,SF% : REM select frame
-2335 IF Ctr%=0 THEN Ctr%=Delay% : VDU 23,27,8 : REM select next frame
-2340 REM *FX 19 : REM wait for refresh
+2320 IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
+2330 VDU 23,27,10,SF% : REM select frame
+2335 REM IF Ctr%=0 THEN Ctr%=Delay% : VDU 23,27,8 : REM select next frame
+2340 *FX 19 : REM wait for refresh
 2345 VDU 23,27,15 : REM update sprites
 2360 REM VDU 23,27,13,SPX%; SPY%; : REM display sprite
 2370 REM VDU 23,27,11       : REM Show the sprite
