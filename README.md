@@ -7,10 +7,11 @@ I will put individual programs in their own repos if they provei useful.
 ## Sprite editor
 sped.bas is a simple sprite editor.
 Work in progress.
-Requires VDP2.0.1 as this enables Bitmapped backed Sprites.
+Requires VDP2.0.0 as this enables Bitmapped backed Sprites.
 Currently works in mode 8 with i a 64 colour, 16x16 four-frame sprite.
+VDP2.0.0 is the version used in console8, but can be run on an Agon Light.
 
-![sped screenshot](SpriteEditor_v0.7.png "Sprite Editor screenshot v0.5")
+![sped screenshot](SpriteEditor_v0.7.png "Sprite Editor screenshot v0.7")
 
 v0.7 added the animated sprite
 

@@ -1,13 +1,12 @@
 10 REM Sprite editor for the Agon Light and Console 8
-11 REM NOTE: Requires VDP version 2.0.1+ for the bitmap backed sprite function
-15 VERSION$="v0.7"
+11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
+15 VERSION$="v0.8"
 20 ON ERROR GOTO 10000
 23 REM memory - just for file load at the moment
 25 DIM graphics 1024
 27 MB%=&40000
 30 MODE 8
 35 SW%=320 : SH%=240
-40 COL%=3
 45 GRIDX%=16 : GRIDY%=16 : W%=16 : H%=16
 50 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
 60 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
@@ -15,25 +14,26 @@
 69 REM palette x/y and sprite x/y positions on screen
 70 PALX%=160 : PALY%=16 : SPX%=120 : SPY%=156
 75 PX%=0 : PY%=0 : REM selected palette position
+80 COL%=3 : REM Current Colour
 
-80 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
-85 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
-90 FILENAME$="" : FLINE%=24 : REM FLINE is line on which filename appears
+90 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
+95 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
+100 FILENAME$="" : FLINE%=24 : REM FLINE is line on which filename appears
 
-100 REM multi-bitmap sprite setup
-105 NumBitmaps% = 4 : BM% = 0 : REM current bitmap
-110 NSF% = 4 : SF%=0 : REM Number of sprite frames and current frame
-115 Delay%=10 : Ctr%=Delay%
+110 REM multi-bitmap sprite setup
+115 NumBitmaps% = 4 : BM% = 0 : REM current bitmap
+120 NSF% = 4 : SF%=0 : REM Number of sprite frames and current frame
+125 Delay%=10 : Ctr%=Delay%
 
-119 REM Calc positions of sprite frame frames
-120 DIM BMX%(NumBitmaps%), BMY%(NumBitmaps%)
-125 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=20 + 24*I% : BMY%(I%)=156 : NEXT
+129 REM Calc positions of sprite frame frames
+130 DIM BMX%(NumBitmaps%), BMY%(NumBitmaps%)
+135 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=20 + 24*I% : BMY%(I%)=156 : NEXT
 
-130 REM declare data for grid
-135 DIM G%(W%*H%, NumBitmaps%) 
+140 REM declare data for grid
+145 DIM G%(W%*H%, NumBitmaps%) 
 
-140 PROCdrawScreen
-150 PROCcreateSprite(W%,H%)
+150 PROCdrawScreen
+155 PROCcreateSprite(W%,H%)
 
 160 FOR B%=0 TO NumBitmaps%-1
 165 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : NEXT I%
@@ -159,14 +159,16 @@
 1370 ENDPROC
 
 1400 DEF PROCgridCursor(switch%)
-1410 REM draw gridcursor
+1405 REM draw gridcursor
+1410 LOCAL col%
 1420 col%=GRIDCOL% : REM off
 1430 IF switch%=1 THEN col%=CURSCOL% : REM on
 1440 PROCrect(GRIDX%+PX%*8, GRIDY%+PY%*8, 8, 8, col%)
 1490 ENDPROC
 
 1500 DEF PROCprintColour(x%,y%)
-1510 REM print colour
+1505 REM print colour
+1510 LOCAL clu%
 1520 clu%=CL%(COL%)
 1530 PRINT TAB(x%,y%);SPC(4); : PRINT TAB(x%,y%+1);SPC(13);
 1540 COLOUR 15: PRINT TAB(x%,y%);"COL ";COL%;
@@ -194,8 +196,9 @@
 1690 ENDPROC
 
 1700 DEF PROCclearGrid(col%, bmap%)
-1710 REM clear grid to a colour (Screen and Data Grids)
-1715 REM update of bitmap must be done separately
+1701 REM clear grid to a colour (Screen and Data Grids)
+1702 REM update of bitmap must be done separately
+1710 LOCAL i%, j%
 1720 FOR i%=0 TO W%-1
 1725 FOR j%=0 TO H%-1
 1730 G%(i%+j%*W%, bmap%)=col%
@@ -208,7 +211,8 @@
 1790 ENDPROC
 
 1800 DEF PROCupdateScreenGrid(bmap%)
-1805 REM Update the screen grid from data grid G%() for given bitmap
+1801 REM Update the screen grid from data grid G%() for given bitmap
+1805 LOCAL col%
 1810 FOR I%=0 TO W%*H%-1
 1820 col%=G%(I%, bmap%) 
 1830 x%=I% MOD W% : y%=I% DIV W%
@@ -217,8 +221,9 @@
 1890 ENDPROC
 
 1900 DEF PROCupdateBitmapFromGrid(bmap%)
-1910 REM update bitmap from its data drid
-1915 REM TODO speed up - use memory and precomputed lookup?
+1905 REM update bitmap from its data drid
+1906 REM TODO speed up - use memory and precomputed lookup?
+1910 LOCAL clu%
 1920 VDU 23,27,0,bmap%   : REM Select bitmap n
 1924 REM Use Adjust Buffer API
 1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;W%*H%*4;
@@ -230,7 +235,8 @@
 1990 ENDPROC
 
 2000 DEF PROCupdateBitmapPixel(bmap%, x%, y%, c%)
-2010 REM update a single bitmap pixel
+2005 REM update a single bitmap pixel
+2010 LOCAL clu%
 2020 VDU 23,27,0,bmap%   : REM Select bitmap n
 2025 REM Use Adjust Buffer API
 2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*W%)*4;4;
@@ -271,11 +277,8 @@
 2310 Ctr% = Ctr% - 1
 2320 IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
 2330 VDU 23,27,10,SF% : REM select frame
-2335 REM IF Ctr%=0 THEN Ctr%=Delay% : VDU 23,27,8 : REM select next frame
 2340 *FX 19 : REM wait for refresh
 2345 VDU 23,27,15 : REM update sprites
-2360 REM VDU 23,27,13,SPX%; SPY%; : REM display sprite
-2370 REM VDU 23,27,11       : REM Show the sprite
 2390 ENDPROC 
 
 3099 REM ------ File Handling --------------------------------
@@ -317,6 +320,7 @@
 
 3500 DEF PROCloadDataFile(h%)
 3501 REM this loads file to internal memory and copies it out to the sprite
+3502 LOCAL col%, I%, IND%
 3505 OSCLI("LOAD " + FILENAME$ + " " + STR$(MB%+graphics))
 3510 FOR I%=0 TO (W%*H%)-1
 3520 DATR% = ?(graphics+I%*3+0) DIV 85
@@ -332,7 +336,8 @@
 3690 ENDPROC
 
 3700 DEF PROCsaveDataFile(h%)
-3705 REM save raw data to a file. RGB format with no header.
+3701 REM save raw data to a file. RGB format with no header.
+3705 LOCAL I%, RGBIndex%
 3710 FOR I%=0 TO (W%*H%)-1
 3720 RGBIndex% = CL%(G%(I%, BM%)) : REM lookup the RGB colour index for this colour 
 3730 BPUT#h%, RGB%(RGBIndex%*3)
@@ -373,7 +378,8 @@
 6012 REM CL%() is BBC Col to RGBIndex
 6013 REM RGB%() is a packed array of the RGB colours
 6014 REM REVLU%() is a reverse lookup table to get the colour  
-6020 RESTORE
+6020 LOCAL I%
+6025 RESTORE
 6030 FOR I%=0 TO 63 
 6040 READ CL%(I%)
 6050 NEXT
