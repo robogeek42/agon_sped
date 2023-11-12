@@ -360,6 +360,7 @@
 3210 PRINT TAB(0,FLINE%);SPC(39);
 3220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter prefix:";
 3225 COLOUR 15 : INPUT Prefix$;
+3227 PRINT TAB(0,FLINE%);SPC(39);
 3230 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter num frames:";
 3235 COLOUR 15 : INPUT NumFrames$; : NumFrames%=VAL(NumFrames$)
 3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
