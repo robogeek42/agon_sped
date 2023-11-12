@@ -320,28 +320,35 @@
 2540 PROCdrawBitmapBoxes
 2550 ENDPROC
 
-3099 REM ------ File Handling --------------------------------
+2999 REM ------ File Handling --------------------------------
+
+3000 DEF PROCloadFile
+3005 REM ask for a filename and load the data in RGB raw format with no headers
+3006 REM ask if they want to load multiple frames
+3010 PRINT TAB(0,FLINE%);SPC(39);
+3015 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
+3020 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0) ELSE PROCloadSingleFilename
+3025 ENDPROC
 
 3100 DEF PROCsaveFile
 3105 REM ask for a filename and save the data in RGB raw format with no headers
-3105 REM ask if they want to save multiple frames
+3106 REM ask if they want to save multiple frames
 3110 PRINT TAB(0,FLINE%);SPC(39);
 3115 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
-3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCsaveMultiple ELSE PROCsaveSingleFilename
+3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(1) ELSE PROCsaveSingleFilename
 3125 ENDPROC
 
 3130 DEF PROCsaveSingleFilename
 3135 REM ask for a filename
 3140 PRINT TAB(0,FLINE%);SPC(39);
 3145 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-3150 COLOUR 15 : INPUT FILENAME$;
-3155 PROCshowFilename
-3160 FHAN%=OPENOUT(FILENAME$)
-3170 REM need an exists/overwrite dialog ...
-3180 PROCsaveDataFile(FHAN%, BM%)
+3150 COLOUR 15 : INPUT F$;
+3160 REM need an exists/overwrite dialog ...
+3170 PROCsaveDataFile(F$, BM%)
+3180 FILENAME$ = F$ : PROCshowFilename
 3190 ENDPROC
 
-3200 DEF PROCsaveMultiple
+3200 DEF PROCmultiple(SV%)
 3205 LOCAL Prefix$, NumFrames%, N%, F$
 3210 PRINT TAB(0,FLINE%);SPC(39);
 3220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter prefix:";
@@ -352,21 +359,24 @@
 3245 @%=&01000202
 3250 FOR N%=0 TO NumFrames%-1
 3260 F$ = Prefix$ + STR$(N%) + ".rgb"
-3265 FHAN%=OPENOUT(F$)
 3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
-3275 PROCsaveDataFile(FHAN%, N%)
+3275 IF SV%=1 THEN PROCsaveDataFile(F$, N%) ELSE PROCloadDataFile(F$, N%)
 3280 NEXT N%
+3285 @%=0
+3288 BM%=0 : PROCupdateScreenGrid(BM%)
 3290 ENDPROC 
 
-3300 DEF PROCloadFile
+3300 DEF PROCloadSingleFilename
 3305 REM ask for a filename, and call load routine 
 3310 PRINT TAB(0,FLINE%);SPC(39);
 3320 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-3330 COLOUR 15 : INPUT FILENAME$;
-3340 FHAN%=OPENIN(FILENAME$)
-3350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; :FILENAME$="": ENDPROC
-3360 FLEN%=EXT#FHAN% : IF FLEN%<>768 THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";:FILENAME$="": CLOSE#FHAN%: ENDPROC
-3370 CLOSE#FHAN% : PROCloadDataFile(FHAN%)
+3330 COLOUR 15 : INPUT F$;
+3340 FHAN%=OPENIN(F$)
+3350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; : ENDPROC
+3360 FLEN%=EXT#FHAN% : IF FLEN%<>(W%*H%*3) THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";: CLOSE#FHAN%: ENDPROC
+3370 CLOSE#FHAN% 
+3380 PROCloadDataFile(F$)
+3385 FILENAME$ = F$ : PROCshowFilename
 3390 ENDPROC
 
 3400 DEF PROCshowFilename
@@ -376,33 +386,34 @@
 3430 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);FILENAME$;
 3490 ENDPROC
 
-3500 DEF PROCloadDataFile(h%)
+3500 DEF PROCloadDataFile(f$, b%)
 3501 REM this loads file to internal memory and copies it out to the sprite
 3502 LOCAL col%, I%, IND%
-3505 OSCLI("LOAD " + FILENAME$ + " " + STR$(MB%+graphics))
+3505 OSCLI("LOAD " + f$ + " " + STR$(MB%+graphics))
 3510 FOR I%=0 TO (W%*H%)-1
 3520 DATR% = ?(graphics+I%*3+0) DIV 85
 3530 DATG% = ?(graphics+I%*3+1) DIV 85
 3540 DATB% = ?(graphics+I%*3+2) DIV 85
 3550 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
 3560 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
-3570 G%(I%, BM%) = col% : x%=I% MOD W% : y%=I% DIV W%
+3570 G%(I%, b%) = col% : x%=I% MOD W% : y%=I% DIV W%
 3580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
 3590 NEXT I%
 3600 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-3610 PROCupdateBitmapFromGrid(BM%)
+3610 PROCupdateBitmapFromGrid(b%)
 3690 ENDPROC
 
-3700 DEF PROCsaveDataFile(h%, b%)
+3700 DEF PROCsaveDataFile(f$, b%)
 3701 REM save raw data to a file. RGB format with no header.
-3705 LOCAL I%, RGBIndex%
-3710 FOR I%=0 TO (W%*H%)-1
-3720 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-3730 BPUT#h%, RGB%(RGBIndex%*3)
-3740 BPUT#h%, RGB%(RGBIndex%*3+1)
-3750 BPUT#h%, RGB%(RGBIndex%*3+2)
-3760 NEXT
-3770 CLOSE#h%
+3705 LOCAL I%, RGBIndex%, h%
+3710 h% = OPENOUT(f$)
+3720 FOR I%=0 TO (W%*H%)-1
+3730 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
+3740 BPUT#h%, RGB%(RGBIndex%*3)
+3742 BPUT#h%, RGB%(RGBIndex%*3+1)
+3744 BPUT#h%, RGB%(RGBIndex%*3+2)
+3750 NEXT
+3760 CLOSE#h%
 3790 ENDPROC
 
 5000 REM ------- Generic Functions ------------
