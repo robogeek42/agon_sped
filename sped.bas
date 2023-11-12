@@ -1,6 +1,6 @@
 10 REM Sprite editor for the Agon Light and Console 8
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
-15 VERSION$="v0.8"
+15 VERSION$="v0.9"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
@@ -111,7 +111,7 @@
 850 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
 860 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
 870 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
-874 COLOUR 21 : PRINT TAB(16,26);"P";     :COLOUR 19:PRINT TAB(21,26);"Pick";
+874 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(21,27);"Pick";
 880 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
 890 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
 900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
@@ -370,7 +370,8 @@
 3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
 3275 IF SV%=1 THEN PROCsaveDataFile(F$, N%) ELSE PROCloadDataFile(F$, N%)
 3280 NEXT N%
-3288 BM%=0 : PROCdrawBitmapBoxes
+3284 BM%=0 : PROCdrawBitmapBoxes
+3286 IF SV%=0 THEN BM%=0 : PROCupdateScreenGrid(BM%) : NSF%=NumFrames% : PROCdrawBitmapBoxes
 3290 ENDPROC 
 
 3400 DEF PROCshowFilename
