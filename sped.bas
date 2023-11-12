@@ -1,9 +1,11 @@
-10 REM Sprite editor for the Agon Light and Console 8
+10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
-15 VERSION$="0.10"
+12 REM Thanks to discord user eightbitswide for the joystick code
+15 VERSION$="v0.11"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
+28 TI%=20 :REM DELAY FOR JOYSTICK INPUT
 30 MODE 8
 35 SW%=320 : SH%=240
 45 GRIDX%=8 : GRIDY%=16 : W%=16 : H%=16
@@ -50,7 +52,8 @@
 240 REM Main Loop
 250 REPEAT
 260 key=INKEY(0)
-270 IF key=-1 GOTO 600 : REM skip to Until
+265 JOY=GET(158) : BUTTON=GET(162)
+270 IF key=-1 OR (JOY=255 AND BUTTON=247) GOTO 600 : REM skip to Until
 280 PROCgridCursor(0)
 290 IF key = 120 ISEXIT=1 : REM x=exit
 300 REM grid cursor movement
@@ -58,6 +61,11 @@
 320 IF key = KEYG(1) AND PX%<15 THEN PX%=PX%+1 : REM right
 330 IF key = KEYG(2) AND PY%>0 THEN PY%=PY%-1 : REM up
 340 IF key = KEYG(3) AND PY%<15 THEN PY%=PY%+1 : REM down
+341 REM joystick movement 
+342 IF JOY>0 AND (JOY AND 223)=JOY AND PX%>0 THEN PX%=PX%-1 : TIME=0: REPEATUNTILTIME>TI% : REM LEFT
+343 IF JOY>0 AND (JOY AND 127)=JOY AND PX%<15 THEN PX%=PX%+1 : TIME=0: REPEATUNTILTIME>TI% : REM RIGHT
+344 IF JOY>0 AND (JOY AND 253)=JOY AND PY%>0 THEN PY%=PY%-1 : TIME=0 : REPEATUNTILTIME>TI% : REM UP
+345 IF JOY>0 AND (JOY AND 247)=JOY AND PY%<15 THEN PY%=PY%+1 : TIME=0 : REPEATUNTILTIME>TI% :REM DOWN
 350 REM colour select movement
 360 IF key = KEYP(0) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
 370 IF key = KEYP(1) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
@@ -65,6 +73,7 @@
 390 IF key = KEYP(3) AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
 400 REM space = set colour, backspace = delete (set to 0), f=fill to current col
 410 IF key = 32 THEN PROCsetCol(PX%,PY%,COL%)
+415 IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
 420 IF key = 127 THEN PROCsetCol(PX%,PY%,0)
 430 IF key = 99 THEN PROCclearGrid(0, BM%)
 440 IF key = 102 THEN PROCclearGrid(COL%, BM%)
@@ -103,8 +112,7 @@
 770 PROCdrawBitmapBoxes
 800 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
 810 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
-814 COLOUR 8:PRINT TAB(27,0);VERSION$;
-816 COLOUR 26:PRINT TAB(32,0);"by Assif";
+814 COLOUR 8:PRINT TAB(35,0);VERSION$;
 820 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
 830 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
 840 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move";
@@ -120,8 +128,8 @@
 940 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
 945 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
 950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
-960 COLOUR 21 : PRINT TAB(19,10);"M N";   :COLOUR 19:PRINT TAB(23,10);"Select Bitmap";
-965 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
+960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select Bitmap";
+965 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num Frames";
 970 PROCshowFilename
 980 COLOUR 15
 990 ENDPROC
