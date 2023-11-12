@@ -4,6 +4,9 @@
 - Implement a Full Help Page "h"
 - Implement a block fill
 - Implement a flood fill 
+- Use a sprite map
+- Load BMP files
+
 
 In v0.9
 - DONE : Implement a multi frame save / multi frame load
