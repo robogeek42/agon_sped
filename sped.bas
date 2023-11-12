@@ -17,6 +17,7 @@
 100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
 105 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
 110 FILENAME$="" : FLINE%=24 : REM FLINE is line on which filename appears
+115 F$=STRING$(20," ") 
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
@@ -34,6 +35,7 @@
 175 DIM G%(W%*H%, NumBitmaps%) 
 
 180 PROCdrawScreen
+182 COLOR 15 : PRINT TAB(18,13);"LOADING";
 185 PROCcreateSprite(W%,H%)
 
 190 FOR B%=0 TO NumBitmaps%-1
@@ -42,6 +44,8 @@
 
 210 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
 220 REM PROCupdateScreenGrid(BM%)
+
+230 COLOR 15 : PRINT TAB(18,13);"       ";
 
 240 REM Main Loop
 250 REPEAT
@@ -74,6 +78,7 @@
 520 IF key = 107 THEN PROCsetShortcutKey
 530 IF key >=49 AND key <=59 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
 540 IF key = 114 THEN PROCsetFrames
+550 PROCshowFilename
 580 PROCgridCursor(1)
 
 600 REM Nokey GOTO comes here
@@ -107,16 +112,16 @@
 860 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
 870 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
 874 COLOUR 21 : PRINT TAB(16,26);"P";     :COLOUR 19:PRINT TAB(21,26);"Pick";
-876 COLOUR 21 : PRINT TAB(16,27);"M/N";   :COLOUR 19:PRINT TAB(21,27);"Bitmap";
 880 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
 890 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
 900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
-905 COLOUR 21 : PRINT TAB(30,27);"R";     :COLOUR 19:PRINT TAB(33,27);"fRames";
 910 COLOUR 21 : PRINT TAB(30,28);"V";     :COLOUR 19:PRINT TAB(33,28);"saVe";
 920 COLOUR 21 : PRINT TAB(30,29);"L";     :COLOUR 19:PRINT TAB(33,29);"Load";
 940 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
 945 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
 950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
+960 COLOUR 21 : PRINT TAB(19,10);"M N";   :COLOUR 19:PRINT TAB(23,10);"Select Bitmap";
+965 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
 970 PROCshowFilename
 980 COLOUR 15
 990 ENDPROC
@@ -327,57 +332,46 @@
 3006 REM ask if they want to load multiple frames
 3010 PRINT TAB(0,FLINE%);SPC(39);
 3015 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
-3020 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0) ELSE PROCloadSingleFilename
-3025 ENDPROC
+3020 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0) : ENDPROC
+3030 PRINT TAB(0,FLINE%);SPC(39);
+3040 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+3050 COLOUR 15 : INPUT F$;
+3060 PROCloadDataFile(F$, BM%)
+3070 FILENAME$ = F$ : PROCshowFilename
+3090 ENDPROC
 
 3100 DEF PROCsaveFile
 3105 REM ask for a filename and save the data in RGB raw format with no headers
 3106 REM ask if they want to save multiple frames
 3110 PRINT TAB(0,FLINE%);SPC(39);
 3115 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
-3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(1) ELSE PROCsaveSingleFilename
-3125 ENDPROC
-
-3130 DEF PROCsaveSingleFilename
-3135 REM ask for a filename
-3140 PRINT TAB(0,FLINE%);SPC(39);
-3145 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-3150 COLOUR 15 : INPUT F$;
-3160 REM need an exists/overwrite dialog ...
-3170 PROCsaveDataFile(F$, BM%)
-3180 FILENAME$ = F$ : PROCshowFilename
+3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(1) : ENDPROC
+3125 REM ask for a filename
+3130 PRINT TAB(0,FLINE%);SPC(39);
+3135 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+3140 COLOUR 15 : INPUT F$;
+3150 REM need an exists/overwrite dialog ...
+3160 PROCsaveDataFile(F$, BM%)
+3170 FILENAME$ = F$ : PROCshowFilename
 3190 ENDPROC
 
 3200 DEF PROCmultiple(SV%)
-3205 LOCAL Prefix$, NumFrames%, N%, F$
+3205 LOCAL Prefix$, NumFrames%, N%
 3210 PRINT TAB(0,FLINE%);SPC(39);
 3220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter prefix:";
 3225 COLOUR 15 : INPUT Prefix$;
 3230 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter num frames:";
 3235 COLOUR 15 : INPUT NumFrames$; : NumFrames%=VAL(NumFrames$)
-3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(30,FLINE%);"Not valid" : ENDPROC
-3245 @%=&01000202
+3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
 3250 FOR N%=0 TO NumFrames%-1
+3255 @%=&01000202
 3260 F$ = Prefix$ + STR$(N%) + ".rgb"
+3265 @%=&90A
 3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
 3275 IF SV%=1 THEN PROCsaveDataFile(F$, N%) ELSE PROCloadDataFile(F$, N%)
 3280 NEXT N%
-3285 @%=0
-3288 BM%=0 : PROCupdateScreenGrid(BM%)
+3288 BM%=0 : PROCdrawBitmapBoxes
 3290 ENDPROC 
-
-3300 DEF PROCloadSingleFilename
-3305 REM ask for a filename, and call load routine 
-3310 PRINT TAB(0,FLINE%);SPC(39);
-3320 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-3330 COLOUR 15 : INPUT F$;
-3340 FHAN%=OPENIN(F$)
-3350 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(30,FLINE%);"No file"; : ENDPROC
-3360 FLEN%=EXT#FHAN% : IF FLEN%<>(W%*H%*3) THEN COLOUR 1:PRINT TAB(30,FLINE%);"Not valid";: CLOSE#FHAN%: ENDPROC
-3370 CLOSE#FHAN% 
-3380 PROCloadDataFile(F$)
-3385 FILENAME$ = F$ : PROCshowFilename
-3390 ENDPROC
 
 3400 DEF PROCshowFilename
 3405 REM just display filename in status bar
@@ -389,18 +383,27 @@
 3500 DEF PROCloadDataFile(f$, b%)
 3501 REM this loads file to internal memory and copies it out to the sprite
 3502 LOCAL col%, I%, IND%
-3505 OSCLI("LOAD " + f$ + " " + STR$(MB%+graphics))
-3510 FOR I%=0 TO (W%*H%)-1
-3520 DATR% = ?(graphics+I%*3+0) DIV 85
-3530 DATG% = ?(graphics+I%*3+1) DIV 85
-3540 DATB% = ?(graphics+I%*3+2) DIV 85
-3550 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
-3560 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
-3570 G%(I%, b%) = col% : x%=I% MOD W% : y%=I% DIV W%
-3580 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
-3590 NEXT I%
-3600 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-3610 PROCupdateBitmapFromGrid(b%)
+3505 PRINT TAB(0,FLINE%);SPC(39); : COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);f$;
+3510 FHAN%=OPENIN(f$)
+3520 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(32,FLINE%);"No file"; : ENDPROC
+3530 FLEN%=EXT#FHAN% : IF FLEN%<>(W%*H%*3) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid";: CLOSE#FHAN%: ENDPROC
+3535 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
+3540 CLOSE#FHAN%
+3545 LSTR$="LOAD " + f$ + " " + STR$(MB%+graphics)
+3550 OSCLI(LSTR$)
+3555 PRINT TAB(24,FLINE%);"LOADED";
+3560 FOR I%=0 TO (W%*H%)-1
+3570 DATR% = ?(graphics+I%*3+0) DIV 85
+3572 DATG% = ?(graphics+I%*3+1) DIV 85
+3574 DATB% = ?(graphics+I%*3+2) DIV 85
+3580 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
+3590 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
+3600 G%(I%, b%) = col% : x%=I% MOD W% : y%=I% DIV W%
+3610 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+3620 NEXT I%
+3625 PRINT TAB(24,FLINE%);"COPIED";
+3630 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+3640 PROCupdateBitmapFromGrid(b%)
 3690 ENDPROC
 
 3700 DEF PROCsaveDataFile(f$, b%)
@@ -487,7 +490,7 @@
 10000 REM  ------------ Error Handling -------------
 10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
 10020 VDU 23, 1, 1 : REM enable text cursor
-10025 @%=0
+10025 @%=&90A
 10030 COLOUR 15
 10040 IF ISEXIT=0 PRINT:REPORT:PRINT " @ line ";ERL:END
 10050 PRINT "Goodbye"
