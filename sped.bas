@@ -1,6 +1,6 @@
 10 REM Sprite editor for the Agon Light and Console 8
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
-15 VERSION$="v0.9"
+15 VERSION$="0.10"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
@@ -321,7 +321,7 @@
 2510 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(39);
 2515 COLOUR 31 : PRINT TAB(0,FLINE%);"Num Frames to Show:";
 2520 COLOUR 15 : INPUT K
-2530 IF K >= 1 AND K <= NumBitmaps% THEN NSF%=K
+2530 IF K >= 1 AND K <= NumBitmaps% THEN NSF%=K : SF%=0
 2540 PROCdrawBitmapBoxes
 2550 ENDPROC
 
@@ -372,7 +372,7 @@
 3275 IF SV%=1 THEN PROCsaveDataFile(F$, N%) ELSE PROCloadDataFile(F$, N%)
 3280 NEXT N%
 3284 BM%=0 : PROCdrawBitmapBoxes
-3286 IF SV%=0 THEN BM%=0 : PROCupdateScreenGrid(BM%) : NSF%=NumFrames% : PROCdrawBitmapBoxes
+3286 IF SV%=0 THEN BM%=0 : PROCupdateScreenGrid(BM%) : NSF%=NumFrames% : SF%=0 : PROCdrawBitmapBoxes
 3290 ENDPROC 
 
 3400 DEF PROCshowFilename

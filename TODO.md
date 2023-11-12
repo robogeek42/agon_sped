@@ -1,5 +1,6 @@
 # TODO List for Sprite Editor sped.bas
 
+- Export data as DATA statements
 - Opening dialog to choose bitmap size and number of frames
 - Implement a Full Help Page "h"
 - Implement a block fill
