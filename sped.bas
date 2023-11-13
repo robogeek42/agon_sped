@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
 12 REM Thanks to discord user eightbitswide for the joystick code
-15 VERSION$="v0.11"
+15 VERSION$="v0.12"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
@@ -53,9 +53,9 @@
 250 REPEAT
 260 key=INKEY(0)
 265 JOY=GET(158) : BUTTON=GET(162)
-270 IF key=-1 OR (JOY=255 AND BUTTON=247) GOTO 600 : REM skip to Until
+270 IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 600 : REM skip to Until
 280 PROCgridCursor(0)
-290 IF key = 120 ISEXIT=1 : REM x=exit
+290 IF key = 120 OR key=120-32 ISEXIT=1 : REM x=exit
 300 REM grid cursor movement
 310 IF key = KEYG(0) AND PX%>0 THEN PX%=PX%-1 : REM left
 320 IF key = KEYG(1) AND PX%<15 THEN PX%=PX%+1 : REM right
@@ -67,26 +67,26 @@
 344 IF JOY>0 AND (JOY AND 253)=JOY AND PY%>0 THEN PY%=PY%-1 : TIME=0 : REPEATUNTILTIME>TI% : REM UP
 345 IF JOY>0 AND (JOY AND 247)=JOY AND PY%<15 THEN PY%=PY%+1 : TIME=0 : REPEATUNTILTIME>TI% :REM DOWN
 350 REM colour select movement
-360 IF key = KEYP(0) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
-370 IF key = KEYP(1) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
-380 IF key = KEYP(2) AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
-390 IF key = KEYP(3) AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
+360 IF key = KEYP(0) OR key=KEYP(0)-32 AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
+370 IF key = KEYP(1) OR key=KEYP(1)-32 AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
+380 IF key = KEYP(2) OR key=KEYP(2)-32 AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
+390 IF key = KEYP(3) OR key=KEYP(3)-32 AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
 400 REM space = set colour, backspace = delete (set to 0), f=fill to current col
 410 IF key = 32 THEN PROCsetCol(PX%,PY%,COL%)
 415 IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
-420 IF key = 127 THEN PROCsetCol(PX%,PY%,0)
-430 IF key = 99 THEN PROCclearGrid(0, BM%)
-440 IF key = 102 THEN PROCclearGrid(COL%, BM%)
-450 IF key = 112 THEN PROCpickCol
+420 IF key = 127 OR key=127-32 THEN PROCsetCol(PX%,PY%,0)
+430 IF key = 99 OR key=99-32 THEN PROCclearGrid(0, BM%)
+440 IF key = 102 OR key=102-32 THEN PROCclearGrid(COL%, BM%)
+450 IF key = 112 OR key=112-32 THEN PROCpickCol
 460 REM V=save L=load
-470 IF key = 118 THEN PROCsaveFile : REM V=saVe file 
-480 IF key = 108 THEN PROCloadFile
-490 IF key = 109 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-500 IF key = 110 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
-510 IF key = 110 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-520 IF key = 107 THEN PROCsetShortcutKey
+470 IF key = 118 OR key=118-32 THEN PROCsaveFile : REM V=saVe file 
+480 IF key = 108 OR key=108-32 THEN PROCloadFile
+490 IF key = 109 OR key=109-32 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+500 IF key = 110 OR key=110-32 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
+510 IF key = 110 OR key=110-32 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+520 IF key = 107 OR key=107-32 THEN PROCsetShortcutKey
 530 IF key >=49 AND key <=59 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
-540 IF key = 114 THEN PROCsetFrames
+540 IF key = 114 OR key = 114-32 THEN PROCsetFrames
 550 PROCshowFilename
 580 PROCgridCursor(1)
 
