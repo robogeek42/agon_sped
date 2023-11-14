@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
 12 REM Thanks to discord user eightbitswide for the joystick code
-15 VERSION$="v0.12"
+15 VERSION$="v0.13"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
@@ -432,15 +432,19 @@
 3790 ENDPROC
 
 3800 DEF PROCexportData(f$, b%, ln%)
-3805 SS$=STRING$(250," ")
+3805 SS$=STRING$(250," ") 
+3807 SS$=STR$(ln%)+" REM "+f$ + " 3 bytes per pixel, RGB" : ln%=ln%+10
 3810 h% = OPENOUT(f$)
 3820 FOR I%=0 TO (W%*H%)-1
-3830 IF I% MOD 8 = 0 THEN SS$=STR$(ln%)+" DATA " : PRINT#h%,SS$ : ln%=ln%+10
-3840 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-3850 SS$ = "&"+STR$~(RGB%(RGBIndex%*3))+", &"+STR$~(RGB%(RGBIndex%*3+1))+", &"+STR$~(RGB%(RGBIndex%*3+1))
-3852 IF I% MOD 8 < 7 THEN SS$=SS$+", "
-3855 PRINT#h%, SS$
-3860 NEXT I%
+3825 IF I% MOD 8 = 0 THEN PROCprintline(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
+3830 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
+3835 FOR J%=0 TO 3
+3840 IF RGB%(RGBIndex%*3+J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(RGB%(RGBIndex%*3+J%))
+3842 IF J%<3 THEN SS$=SS$+","
+3845 NEXT J%
+3850 IF I% MOD 8 < 7 THEN SS$=SS$+","
+3855 NEXT I%
+3860 PROCprintline(h%, SS$)
 3870 CLOSE#h%
 3890 ENDPROC
 
@@ -455,6 +459,11 @@
 3970 PROCexportData(F$, BM%, Line%)
 3980 PROCshowFilename
 3990 ENDPROC
+
+4000 DEF PROCprintline(FH%, S$)
+4010 REM dos line endings
+4020 PRINT#FH%,S$ : BPUT#FH%,10
+4030 ENDPROC
 
 5000 REM ------- Generic Functions ------------
 
