@@ -87,7 +87,8 @@
 520 IF key = 107 OR key=107-32 THEN PROCsetShortcutKey
 530 IF key >=49 AND key <=59 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
 540 IF key = 114 OR key = 114-32 THEN PROCsetFrames
-550 PROCshowFilename
+550 IF key = 101 OR key = 101-32 THEN PROCexport
+560 PROCshowFilename
 580 PROCgridCursor(1)
 
 600 REM Nokey GOTO comes here
@@ -123,8 +124,9 @@
 880 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
 890 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
 900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
-910 COLOUR 21 : PRINT TAB(30,28);"V";     :COLOUR 19:PRINT TAB(33,28);"saVe";
-920 COLOUR 21 : PRINT TAB(30,29);"L";     :COLOUR 19:PRINT TAB(33,29);"Load";
+910 COLOUR 21 : PRINT TAB(30,27);"V";     :COLOUR 19:PRINT TAB(33,27);"saVe";
+920 COLOUR 21 : PRINT TAB(30,28);"L";     :COLOUR 19:PRINT TAB(33,28);"Load";
+920 COLOUR 21 : PRINT TAB(30,29);"E";     :COLOUR 19:PRINT TAB(33,29);"Export";
 940 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
 945 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
 950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
@@ -428,6 +430,31 @@
 3750 NEXT
 3760 CLOSE#h%
 3790 ENDPROC
+
+3800 DEF PROCexportData(f$, b%, ln%)
+3805 SS$=STRING$(250," ")
+3810 h% = OPENOUT(f$)
+3820 FOR I%=0 TO (W%*H%)-1
+3830 IF I% MOD 8 = 0 THEN SS$=STR$(ln%)+" DATA " : PRINT#h%,SS$ : ln%=ln%+10
+3840 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
+3850 SS$ = "&"+STR$~(RGB%(RGBIndex%*3))+", &"+STR$~(RGB%(RGBIndex%*3+1))+", &"+STR$~(RGB%(RGBIndex%*3+1))
+3852 IF I% MOD 8 < 7 THEN SS$=SS$+", "
+3855 PRINT#h%, SS$
+3860 NEXT I%
+3870 CLOSE#h%
+3890 ENDPROC
+
+3900 DEF PROCexport
+3910 PRINT TAB(0,FLINE%);SPC(39);
+3920 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+3930 COLOUR 15 : INPUT F$;
+3935 IF F$ = "" THEN PROCshowFilename : ENDPROC
+3940 PRINT TAB(0,FLINE%);SPC(39);
+3950 COLOUR 31 : PRINT TAB(0,FLINE%);"Line number:";
+3960 COLOUR 15 : INPUT Line%
+3970 PROCexportData(F$, BM%, Line%)
+3980 PROCshowFilename
+3990 ENDPROC
 
 5000 REM ------- Generic Functions ------------
 
