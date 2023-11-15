@@ -3,23 +3,23 @@
   30 MB%=&40000 : REM user memory base
   40 DIM CLU% 4 : !CLU%=&FFAA5500
 
- 120 PRINT TAB(0,2);"Load Bitmap from RGB 888 data"
+ 120 PRINT TAB(0,2);"Load Bitmap from RGB888 data"
  130 PROCloadBitmapRGB888data(0,16,16,10000)
  140 PROCdrawBitmap(0, 20, 0)
 
- 150 PRINT TAB(0,3);"Load Bitmap from RGBA 8888 data"
+ 150 PRINT TAB(0,3);"Load Bitmap from RGBA8888 data"
  160 PROCloadBitmapRGBA8888data(1,16,16,11000)
  170 PROCdrawBitmap(1, 40, 0)
 
- 180 PRINT TAB(0,4);"Load Bitmap from RGBA 2222 data"
+ 180 PRINT TAB(0,4);"Load Bitmap from RGBA2222 data"
  190 PROCloadBitmapRGBA2222data(2,16,16,12000)
  200 PROCdrawBitmap(2, 60, 0)
 
- 210 PRINT TAB(0,4);"Load from RGBA 2222 to Native RGBA2222"
+ 210 PRINT TAB(0,5);"Load from RGBA2222 to Native RGBA2222"
  220 PROCloadBitmapRGBA2222dataNative(3,16,16,12000)
- 230 PROCdrawBitmap(2, 60, 0)
+ 230 PROCdrawBitmap(3, 80, 0)
 
- 290 STOP
+ 290 END
 
  300 DEF PROCdrawBitmap(bm%, x%, y%)
  310 VDU 23,27,0,bm% : REM select bitmap
@@ -66,14 +66,11 @@
  801 REM Load bitmap num bm% from DATA below at line dat%
  802 REM create the bitmap as a buffer and use the correct format
  810 RESTORE dat%
- 820 VDU 23,0,&A0,&FA00+bm%;3,w%*h%; : REM create a buffer 
- 825 VDU 23,0,&A0,&FA00+bm%;2        : REM clear it out 
- 830 VDU 23,0,&A0,&FA00+bm%;4        : REM stream data ...
- 835 FOR I%=0 TO (w%*h%)-1
- 840 READ dat%
- 850 VDU dat%
+ 820 VDU 23,0,&A0,&FA00+bm%;2        : REM clear buffer
+ 830 VDU 23,0,&A0,&FA00+bm%;0,w%*h%; : REM create buffer and stream data ...
+ 840 FOR I%=0 TO (w%*h%)-1
+ 850 READ dat% : VDU dat%
  860 NEXT
- 865 VDU 23,0,&A0,0;4 : REM close stream
  870 VDU 23, 27, &20, &FA00+bm%; : REM Select bitmap (using a buffer ID)
  880 VDU 23, 27, &21, w%; h%; 1  : REM Create bitmap from buffer. Format 1=RGBA2222
  890 ENDPROC
