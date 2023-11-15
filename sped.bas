@@ -12,6 +12,7 @@
 50 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
 55 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
 60 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
+65 DIM BSTAB%(3,3) : PROCloadBitshiftTable
 
 70 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
 80 PX%=0 : PY%=0 : COL%=1 : REM selected palette colour
@@ -85,7 +86,7 @@
 500 IF key = 110 OR key=110-32 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
 510 IF key = 110 OR key=110-32 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
 520 IF key = 107 OR key=107-32 THEN PROCsetShortcutKey
-530 IF key >=49 AND key <=59 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
+530 IF key >=49 AND key <=57 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
 540 IF key = 114 OR key = 114-32 THEN PROCsetFrames
 550 IF key = 101 OR key = 101-32 THEN PROCexport
 560 PROCshowFilename
@@ -321,14 +322,14 @@
 2399 REM ------ Set shortcut keys, Frames etc. ----------------
 
 2400 DEF PROCsetShortcutKey
-2410 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(39);
+2410 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(40);
 2415 COLOUR 31 : PRINT TAB(0,FLINE%);"Shortcut (1-9):";
 2420 COLOUR 15 : INPUT K
 2430 IF K >= 1 AND K <= 9 THEN SKey%(K) = COL% :  PROCfilledRect(SCBOXX%+K*16-10,SCBOXY%+14,6,6,COL%)
 2490 ENDPROC
 
 2500 DEF PROCsetFrames
-2510 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(39);
+2510 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(40);
 2515 COLOUR 31 : PRINT TAB(0,FLINE%);"Num Frames to Show:";
 2520 COLOUR 15 : INPUT K
 2530 IF K >= 1 AND K <= NumBitmaps% THEN NSF%=K : SF%=0
@@ -340,10 +341,10 @@
 3000 DEF PROCloadFile
 3005 REM ask for a filename and load the data in RGB raw format with no headers
 3006 REM ask if they want to load multiple frames
-3010 PRINT TAB(0,FLINE%);SPC(39);
+3010 PRINT TAB(0,FLINE%);SPC(40);
 3015 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
 3020 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0) : ENDPROC
-3030 PRINT TAB(0,FLINE%);SPC(39);
+3030 PRINT TAB(0,FLINE%);SPC(40);
 3040 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
 3050 COLOUR 15 : INPUT F$;
 3060 PROCloadDataFile(F$, BM%)
@@ -353,11 +354,11 @@
 3100 DEF PROCsaveFile
 3105 REM ask for a filename and save the data in RGB raw format with no headers
 3106 REM ask if they want to save multiple frames
-3110 PRINT TAB(0,FLINE%);SPC(39);
+3110 PRINT TAB(0,FLINE%);SPC(40);
 3115 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
 3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(1) : ENDPROC
 3125 REM ask for a filename
-3130 PRINT TAB(0,FLINE%);SPC(39);
+3130 PRINT TAB(0,FLINE%);SPC(40);
 3135 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
 3140 COLOUR 15 : INPUT F$;
 3150 REM need an exists/overwrite dialog ...
@@ -367,10 +368,10 @@
 
 3200 DEF PROCmultiple(SV%)
 3205 LOCAL Prefix$, NumFrames%, N%
-3210 PRINT TAB(0,FLINE%);SPC(39);
+3210 PRINT TAB(0,FLINE%);SPC(40);
 3220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter prefix:";
 3225 COLOUR 15 : INPUT Prefix$;
-3227 PRINT TAB(0,FLINE%);SPC(39);
+3227 PRINT TAB(0,FLINE%);SPC(40);
 3230 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter num frames:";
 3235 COLOUR 15 : INPUT NumFrames$; : NumFrames%=VAL(NumFrames$)
 3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
@@ -388,14 +389,14 @@
 3400 DEF PROCshowFilename
 3405 REM just display filename in status bar
 3410 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
-3420 PRINT TAB(0,FLINE%);SPC(39);
+3420 PRINT TAB(0,FLINE%);SPC(40);
 3430 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);FILENAME$;
 3490 ENDPROC
 
 3500 DEF PROCloadDataFile(f$, b%)
 3501 REM this loads file to internal memory and copies it out to the sprite
 3502 LOCAL col%, I%, IND%
-3505 PRINT TAB(0,FLINE%);SPC(39); : COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);f$;
+3505 PRINT TAB(0,FLINE%);SPC(40); : COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);f$;
 3510 FHAN%=OPENIN(f$)
 3520 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(32,FLINE%);"No file"; : ENDPROC
 3530 FLEN%=EXT#FHAN% : IF FLEN%<>(W%*H%*3) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid";: CLOSE#FHAN%: ENDPROC
@@ -431,39 +432,71 @@
 3760 CLOSE#h%
 3790 ENDPROC
 
-3800 DEF PROCexportData(f$, b%, ln%)
-3805 SS$=STRING$(250," ") 
-3807 SS$=STR$(ln%)+" REM "+f$ + " 3 bytes per pixel, RGB" : ln%=ln%+10
-3810 h% = OPENOUT(f$)
-3820 FOR I%=0 TO (W%*H%)-1
-3825 IF I% MOD 8 = 0 THEN PROCprintline(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
-3830 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-3835 FOR J%=0 TO 3
-3840 IF RGB%(RGBIndex%*3+J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(RGB%(RGBIndex%*3+J%))
-3842 IF J%<3 THEN SS$=SS$+","
-3845 NEXT J%
-3850 IF I% MOD 8 < 7 THEN SS$=SS$+","
-3855 NEXT I%
-3860 PROCprintline(h%, SS$)
-3870 CLOSE#h%
-3890 ENDPROC
+3800 DEF PROCprintline(FH%, S$)
+3810 REM dos line endings
+3820 PRINT#FH%,S$ : BPUT#FH%,10
+3830 ENDPROC
 
-3900 DEF PROCexport
-3910 PRINT TAB(0,FLINE%);SPC(39);
-3920 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-3930 COLOUR 15 : INPUT F$;
-3935 IF F$ = "" THEN PROCshowFilename : ENDPROC
-3940 PRINT TAB(0,FLINE%);SPC(39);
-3950 COLOUR 31 : PRINT TAB(0,FLINE%);"Line number:";
-3960 COLOUR 15 : INPUT Line%
-3970 PROCexportData(F$, BM%, Line%)
-3980 PROCshowFilename
+3900 DEF PROCexportData8bit(f$, b%, ln%, alpha%)
+3906 PPL%=8 
+3910 SS$=STRING$(250," ") 
+3915 SS$=STR$(ln%)+" REM "+f$ 
+3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes per pixel, RGBA" ELSE SS$=SS$+" 3 bytes per pixel, RGB" 
+3925 ln%=ln%+10
+3930 h% = OPENOUT(f$)
+3935 FOR I%=0 TO (W%*H%)-1
+3940 IF I% MOD PPL% = 0 THEN PROCprintline(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
+3945 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
+3950 FOR J%=0 TO 2
+3955 IF RGB%(RGBIndex%*3+J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(RGB%(RGBIndex%*3+J%))
+3960 IF J%<2 THEN SS$=SS$+","
+3964 NEXT J%
+3966 IF alpha%=1 THEN SS$=SS$+",&FF"
+3970 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
+3975 NEXT I%
+3980 PROCprintline(h%, SS$)
+3985 CLOSE#h%
 3990 ENDPROC
 
-4000 DEF PROCprintline(FH%, S$)
-4010 REM dos line endings
-4020 PRINT#FH%,S$ : BPUT#FH%,10
-4030 ENDPROC
+4000 DEF PROCexportData2bit(f$,b%,ln%)
+4002 LOCAL PIX%,PPL%,SS$,I%,J%,col%
+4004 PIX%=0
+4006 PPL%=16
+4010 SS$=STRING$(250," ") 
+4015 SS$=STR$(ln%)+" REM "+f$ SS$=SS$+" format RGBA2222" 
+4025 ln%=ln%+10
+4030 h% = OPENOUT(f$)
+4035 FOR I%=0 TO (W%*H%)-1
+4040 IF I% MOD PPL% = 0 THEN PROCprintline(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
+4045 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
+4047 PIX%=0
+4050 FOR J%=0 TO 3
+4055 col%=RGB%(RGBIndex%*3+J%) AND 3 : REM convert colour 8bit to 2 bit
+4060 PIX%=PIX% OR BSTAB%(col%,J%) : REM bitshift colour and add to final value
+4066 NEXT J%
+4067 IF RGBIndex%>0 THEN PIX%=PIX% OR  &C0 : REM alpha=1
+4068 IF PIX%=0 THEN SS$="0" ELSE SS$=SS$+"&"+STR$~(PIX%)
+4070 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
+4075 NEXT I%
+4080 PROCprintline(h%, SS$)
+4085 CLOSE#h%
+4090 ENDPROC
+
+4100 DEF PROCexport
+4110 PRINT TAB(0,FLINE%);SPC(40);
+4112 COLOUR 31 : PRINT TAB(0,FLINE%);"Format 1)RGB888 2)RGBA8888 3)RGBA2222";
+4114 COLOUR 15 : INPUT fmt%
+4116 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+4120 PRINT TAB(0,FLINE%);SPC(40);
+4122 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
+4124 COLOUR 15 : INPUT F$;
+4126 IF F$ = "" THEN PROCshowFilename : ENDPROC
+4130 PRINT TAB(0,FLINE%);SPC(40);
+4132 COLOUR 31 : PRINT TAB(0,FLINE%);"Line number:";
+4133 COLOUR 15 : INPUT Line%
+4140 IF fmt%=3 THEN PROCexportData2bit(F$,BM%,Line%) ELSE PROCexportData8bit(F$, BM%, Line%, fmt%-1)
+4180 PROCshowFilename
+4190 ENDPROC
 
 5000 REM ------- Generic Functions ------------
 
@@ -497,7 +530,7 @@
 6013 REM RGB%() is a packed array of the RGB colours
 6014 REM REVLU%() is a reverse lookup table to get the colour  
 6020 LOCAL I%
-6025 RESTORE
+6025 RESTORE 6210
 6030 FOR I%=0 TO 63 
 6040 READ CL%(I%)
 6050 NEXT
@@ -532,6 +565,20 @@
 6440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
 6450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
 6460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
+
+6500 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
+6510 DEF PROCloadBitshiftTable
+6515 LOCAL col%,comp%
+6520 RESTORE 6610
+6530 FOR comp%=0 TO 3
+6540 FOR col%=0 TO 3
+6550 READ BSTAB%(col%,comp%) 
+6560 NEXT col%
+6570 NEXT comp%
+6595 ENDPROC
+
+6600 REM bitshift lookup 
+6610 DATA 0,1,2,3, 0,4,8,&0C, 0,&10,&20,&30, 0,&40,&80,&C0
 
 10000 REM  ------------ Error Handling -------------
 10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
