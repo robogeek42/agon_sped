@@ -15,7 +15,11 @@
  190 PROCloadBitmapRGBA2222data(2,16,16,12000)
  200 PROCdrawBitmap(2, 60, 0)
 
- 220 STOP
+ 210 PRINT TAB(0,4);"Load from RGBA 2222 to Native RGBA2222"
+ 220 PROCloadBitmapRGBA2222dataNative(3,16,16,12000)
+ 230 PROCdrawBitmap(2, 60, 0)
+
+ 290 STOP
 
  300 DEF PROCdrawBitmap(bm%, x%, y%)
  310 VDU 23,27,0,bm% : REM select bitmap
@@ -57,6 +61,22 @@
  690 VDU ?(CLU%+datR%), ?(CLU%+datG%), ?(CLU%+datB%), &FF
  700 NEXT
  710 ENDPROC
+
+ 800 DEF PROCloadBitmapRGBA2222dataNative(bm%, w%, h%, dat%)
+ 801 REM Load bitmap num bm% from DATA below at line dat%
+ 802 REM create the bitmap as a buffer and use the correct format
+ 810 RESTORE dat%
+ 820 VDU 23,0,&A0,&FA00+bm%;3,w%*h%; : REM create a buffer 
+ 825 VDU 23,0,&A0,&FA00+bm%;2        : REM clear it out 
+ 830 VDU 23,0,&A0,&FA00+bm%;4        : REM stream data ...
+ 835 FOR I%=0 TO (w%*h%)-1
+ 840 READ dat%
+ 850 VDU dat%
+ 860 NEXT
+ 865 VDU 23,0,&A0,0;4 : REM close stream
+ 870 VDU 23, 27, &20, &FA00+bm%; : REM Select bitmap (using a buffer ID)
+ 880 VDU 23, 27, &21, w%; h%; 1  : REM Create bitmap from buffer. Format 1=RGBA2222
+ 890 ENDPROC
 
 
 10000 REM a_rgb888.txt 3 bytes per pixel, RGB
