@@ -322,16 +322,12 @@
 2399 REM ------ Set shortcut keys, Frames etc. ----------------
 
 2400 DEF PROCsetShortcutKey
-2410 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(40);
-2415 COLOUR 31 : PRINT TAB(0,FLINE%);"Shortcut (1-9):";
-2420 COLOUR 15 : INPUT K
+2410 K = FNinputInt("Shortcut (1-9):")
 2430 IF K >= 1 AND K <= 9 THEN SKey%(K) = COL% :  PROCfilledRect(SCBOXX%+K*16-10,SCBOXY%+14,6,6,COL%)
 2490 ENDPROC
 
 2500 DEF PROCsetFrames
-2510 COLOUR 31 : PRINT TAB(0,FLINE%);SPC(40);
-2515 COLOUR 31 : PRINT TAB(0,FLINE%);"Num Frames to Show:";
-2520 COLOUR 15 : INPUT K
+2510 K = FNinputInt("Num Frames to Show:")
 2530 IF K >= 1 AND K <= NumBitmaps% THEN NSF%=K : SF%=0
 2540 PROCdrawBitmapBoxes
 2550 ENDPROC
@@ -341,8 +337,7 @@
 3000 DEF PROCloadFile
 3005 REM ask for a filename and load the data in RGB raw format with no headers
 3006 REM ask if they want to load multiple frames
-3010 PRINT TAB(0,FLINE%);SPC(40);
-3015 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
+3010 yn$ = FNinputStr("Multiple Frames (y/N)")
 3020 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0) : ENDPROC
 3030 PRINT TAB(0,FLINE%);SPC(40);
 3040 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
@@ -354,13 +349,10 @@
 3100 DEF PROCsaveFile
 3105 REM ask for a filename and save the data in RGB raw format with no headers
 3106 REM ask if they want to save multiple frames
-3110 PRINT TAB(0,FLINE%);SPC(40);
-3115 COLOUR 31 : PRINT TAB(0,FLINE%);"Multiple Frames (y/N)"; : COLOUR 15 : INPUT yn$
+3110 yn$ = FNinputStr("Multiple Frames (y/N)")
 3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(1) : ENDPROC
 3125 REM ask for a filename
-3130 PRINT TAB(0,FLINE%);SPC(40);
-3135 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-3140 COLOUR 15 : INPUT F$;
+3130 F$ = FNinputStr("Enter filename:")
 3150 REM need an exists/overwrite dialog ...
 3160 PROCsaveDataFile(F$, BM%)
 3170 FILENAME$ = F$ : PROCshowFilename
@@ -368,12 +360,8 @@
 
 3200 DEF PROCmultiple(SV%)
 3205 LOCAL Prefix$, NumFrames%, N%
-3210 PRINT TAB(0,FLINE%);SPC(40);
-3220 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter prefix:";
-3225 COLOUR 15 : INPUT Prefix$;
-3227 PRINT TAB(0,FLINE%);SPC(40);
-3230 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter num frames:";
-3235 COLOUR 15 : INPUT NumFrames$; : NumFrames%=VAL(NumFrames$)
+3210 Prefix$ = FNinputStr("Enter prefix:")
+3220 NumFrames% = FNinputInt("Enter num frames:")
 3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
 3250 FOR N%=0 TO NumFrames%-1
 3255 @%=&01000202
