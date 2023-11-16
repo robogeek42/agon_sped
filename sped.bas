@@ -432,7 +432,7 @@
 3760 CLOSE#h%
 3790 ENDPROC
 
-3800 DEF PROCprintline(FH%, S$)
+3800 DEF PROCprintFileLine(FH%, S$)
 3810 REM dos line endings
 3820 PRINT#FH%,S$ : BPUT#FH%,10
 3830 ENDPROC
@@ -441,11 +441,12 @@
 3906 PPL%=8 
 3910 SS$=STRING$(250," ") 
 3915 SS$=STR$(ln%)+" REM "+f$ 
-3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes per pixel, RGBA" ELSE SS$=SS$+" 3 bytes per pixel, RGB" 
+3920 IF alpha%=1 THEN SS$=SS$+" 4 bpp RGBA" ELSE SS$=SS$+" 3 bpp RGB" 
+3922 SS$=SS$+" bitmap "+STR$(b%)
 3925 ln%=ln%+10
-3930 h% = OPENOUT(f$)
+3930 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
 3935 FOR I%=0 TO (W%*H%)-1
-3940 IF I% MOD PPL% = 0 THEN PROCprintline(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
+3940 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 3945 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 3950 FOR J%=0 TO 2
 3955 IF RGB%(RGBIndex%*3+J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(RGB%(RGBIndex%*3+J%))
@@ -454,7 +455,7 @@
 3966 IF alpha%=1 THEN SS$=SS$+",&FF"
 3970 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
 3975 NEXT I%
-3980 PROCprintline(h%, SS$)
+3980 PROCprintFileLine(h%, SS$)
 3985 CLOSE#h%
 3990 ENDPROC
 
@@ -463,39 +464,41 @@
 4004 PIX%=0
 4006 PPL%=16
 4010 SS$=STRING$(250," ") 
-4015 SS$=STR$(ln%)+" REM "+f$ SS$=SS$+" format RGBA2222" 
+4015 SS$=STR$(ln%)+" REM "+f$+" 1 bpp RGBA2222" 
+4022 SS$=SS$+" bitmap "+STR$(b%)
 4025 ln%=ln%+10
-4030 h% = OPENOUT(f$)
+4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
 4035 FOR I%=0 TO (W%*H%)-1
-4040 IF I% MOD PPL% = 0 THEN PROCprintline(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
+4040 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 4045 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 4047 PIX%=0
 4050 FOR J%=0 TO 3
 4055 col%=RGB%(RGBIndex%*3+J%) AND 3 : REM convert colour 8bit to 2 bit
 4060 PIX%=PIX% OR BSTAB%(col%,J%) : REM bitshift colour and add to final value
 4066 NEXT J%
-4067 IF RGBIndex%>0 THEN PIX%=PIX% OR  &C0 : REM alpha=1
-4068 IF PIX%=0 THEN SS$="0" ELSE SS$=SS$+"&"+STR$~(PIX%)
+4067 IF RGBIndex%>0 THEN PIX%=PIX% OR &C0 : REM alpha=1
+4068 IF PIX%=0 THEN SS$=SS$+"0" ELSE SS$=SS$+"&"+STR$~(PIX%)
 4070 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
 4075 NEXT I%
-4080 PROCprintline(h%, SS$)
+4080 PROCprintFileLine(h%, SS$)
 4085 CLOSE#h%
 4090 ENDPROC
 
 4100 DEF PROCexport
-4110 PRINT TAB(0,FLINE%);SPC(40);
-4112 COLOUR 31 : PRINT TAB(0,FLINE%);"Format 1)RGB888 2)RGBA8888 3)RGBA2222";
-4114 COLOUR 15 : INPUT fmt%
-4116 IF fmt%<1 OR fmt%>3 THEN ENDPROC
-4120 PRINT TAB(0,FLINE%);SPC(40);
-4122 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
-4124 COLOUR 15 : INPUT F$;
-4126 IF F$ = "" THEN PROCshowFilename : ENDPROC
-4130 PRINT TAB(0,FLINE%);SPC(40);
-4132 COLOUR 31 : PRINT TAB(0,FLINE%);"Line number:";
-4133 COLOUR 15 : INPUT Line%
-4140 IF fmt%=3 THEN PROCexportData2bit(F$,BM%,Line%) ELSE PROCexportData8bit(F$, BM%, Line%, fmt%-1)
-4180 PROCshowFilename
+4110 yn$ = FNinputStr("Multiple Frames (y/N)")
+4115 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
+4120 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
+4125 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+4130 F$ = FNinputStr("Enter filename:")
+4135 IF F$ = "" THEN PROCshowFilename : ENDPROC
+4140 Line% = FNinputInt("Line number:")
+4150 IF mult%=1 THEN bmfrm%=0 : bmto%=NumBitmaps%-1 ELSE bmfrm%=BM% : bmto%=BM% 
+4160 FOR bmid%=bmfrm% TO bmto% 
+4165 REM COLOUR 10:PRINT TAB(32,FLINE%);"bm=";$bmid%;
+4170 IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%):Line%=Line%+10*W%+10 ELSE PROCexportData8bit(F$, bmid%, Line%, fmt%-1):Line%=Line%+20*W%+10
+4180 NEXT bmid%
+4182 REM COLOUR 10:PRINT TAB(36,FLINE%);"ok";
+4185 PROCshowFilename
 4190 ENDPROC
 
 5000 REM ------- Generic Functions ------------
@@ -520,6 +523,17 @@
 5160 DRAW x%, y%+h% 
 5170 DRAW x%, y%
 5180 ENDPROC
+
+5200 DEF FNinputStr(prompt$)
+5210 PRINT TAB(0,FLINE%);SPC(40);
+5220 COLOUR 31 : PRINT TAB(0,FLINE%);prompt$; : COLOUR 15 : INPUT s$
+5230 =s$
+
+5250 DEF FNinputInt(prompt$)
+5260 PRINT TAB(0,FLINE%);SPC(40);
+5270 COLOUR 31 : PRINT TAB(0,FLINE%);prompt$; : COLOUR 15 : INPUT i%
+5280 =i%
+
 
 6000 REM ------- Colour lookup Functions ------------
 6005 :
