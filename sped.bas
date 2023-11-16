@@ -429,8 +429,8 @@
 3906 PPL%=8 
 3910 SS$=STRING$(250," ") 
 3915 SS$=STR$(ln%)+" REM "+f$ 
-3920 IF alpha%=1 THEN SS$=SS$+" 4 bpp RGBA" ELSE SS$=SS$+" 3 bpp RGB" 
-3922 SS$=SS$+" bitmap "+STR$(b%)
+3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes pp RGBA" ELSE SS$=SS$+" 3 bytes pp RGB" 
+3922 SS$=SS$+" bitmap num "+STR$(b%+1)
 3925 ln%=ln%+10
 3930 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
 3935 FOR I%=0 TO (W%*H%)-1
@@ -452,8 +452,8 @@
 4004 PIX%=0
 4006 PPL%=16
 4010 SS$=STRING$(250," ") 
-4015 SS$=STR$(ln%)+" REM "+f$+" 1 bpp RGBA2222" 
-4022 SS$=SS$+" bitmap "+STR$(b%)
+4015 SS$=STR$(ln%)+" REM "+f$+" 1 bytes pp RGBA2222" 
+4022 SS$=SS$+" bitmap num "+STR$(b%+1)
 4025 ln%=ln%+10
 4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
 4035 FOR I%=0 TO (W%*H%)-1
@@ -473,19 +473,22 @@
 4090 ENDPROC
 
 4100 DEF PROCexport
+4105 LOCAL frames% : frames%=1
 4110 yn$ = FNinputStr("Multiple Frames (y/N)")
 4115 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
-4120 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
-4125 IF fmt%<1 OR fmt%>3 THEN ENDPROC
-4130 F$ = FNinputStr("Enter filename:")
-4135 IF F$ = "" THEN PROCshowFilename : ENDPROC
-4140 Line% = FNinputInt("Line number:")
-4150 IF mult%=1 THEN bmfrm%=0 : bmto%=NumBitmaps%-1 ELSE bmfrm%=BM% : bmto%=BM% 
+4120 IF mult%=1 THEN frames% = FNinputInt("Num frames")
+4124 IF mult%=1 AND (frames%<1 OR frames%>NumBitmaps%) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+4126 IF mult%=1 THEN bmfrm%=0 : bmto%=frames%-1 ELSE bmfrm%=BM% : bmto%=BM% 
+4130 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
+4135 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+4140 F$ = FNinputStr("Enter filename:")
+4145 IF F$ = "" THEN PROCshowFilename : ENDPROC
+4150 Line% = FNinputInt("Line number:")
 4160 FOR bmid%=bmfrm% TO bmto% 
-4165 REM COLOUR 10:PRINT TAB(32,FLINE%);"bm=";$bmid%;
+4165 COLOUR 10:PRINT TAB(32,FLINE%);"bm=";STR$(bmid%+1);
 4170 IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%):Line%=Line%+10*W%+10 ELSE PROCexportData8bit(F$, bmid%, Line%, fmt%-1):Line%=Line%+20*W%+10
 4180 NEXT bmid%
-4182 REM COLOUR 10:PRINT TAB(36,FLINE%);"ok";
+4182 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
 4185 PROCshowFilename
 4190 ENDPROC
 
