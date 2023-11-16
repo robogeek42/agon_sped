@@ -57,6 +57,7 @@
 270 IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 600 : REM skip to Until
 280 PROCgridCursor(0)
 290 IF key = 120 OR key=120-32 ISEXIT=1 : REM x=exit
+295 IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
 300 REM grid cursor movement
 310 IF key = KEYG(0) AND PX%>0 THEN PX%=PX%-1 : REM left
 320 IF key = KEYG(1) AND PX%<15 THEN PX%=PX%+1 : REM right
@@ -95,9 +96,9 @@
 600 REM Nokey GOTO comes here
 610 PROCshowSprite
 670 UNTIL ISEXIT = 1
-680 GOTO 5000
+680 GOTO 10000
 
-695 STOP
+695 END
 
 699 REM ------ Static Screen Update Functions ---------------
 
@@ -591,5 +592,5 @@
 10025 @%=&90A
 10030 COLOUR 15
 10040 IF ISEXIT=0 PRINT:REPORT:PRINT " @ line ";ERL:END
-10050 PRINT "Goodbye"
+10050 PRINT : PRINT "Goodbye"
 
