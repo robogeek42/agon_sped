@@ -6,15 +6,15 @@
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
 30 MODE 8
-32 SW%=320 : SH%=240
-35 REM ----- config in sped.ini -----
+35 ISEXIT=0 : SW%=320 : SH%=240 
+37 REM ----- config in sped.ini -----
 40 CONFIG_SIZE=1 : CONFIG_JOY=0 : CONFIG_TYPE=0
 42 CONFIG_JOYDELAY=20
 50 PROCconfig("sped.ini")
 52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
 55 REM --------------------------------
 57 GRIDX%=8 : GRIDY%=16 : REM Grid position
-60 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
+60 GRIDCOL%=8 : CURSCOL%=15
 65 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
 70 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
 75 DIM BSTAB%(3,3) : PROCloadBitshiftTable
@@ -101,48 +101,55 @@
 
 600 REM Nokey GOTO comes here
 610 PROCshowSprite
-670 UNTIL ISEXIT = 1
-680 GOTO 10000
+620 UNTIL ISEXIT = 1
+630 GOTO 10000
 
 695 END
 
 699 REM ------ Static Screen Update Functions ---------------
 
-700 DEF PROCdrawScreen
-705 REM draw screen - titles, instructions.
-710 LOCAL I%
-715 CLS
-720 VDU 23,0,192,0 : REM turn off logical screen scaling
-730 VDU 23, 1, 0 : REM disable text cursor
-740 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-745 PROCdrawPalette(PALX%,PALY%)
-750 PROCselectPaletteCol(COL%)
-760 PROCgridCursor(1)
-770 PROCdrawBitmapBoxes
-800 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
-810 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
-814 COLOUR 8:PRINT TAB(35,0);VERSION$;
-820 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
-830 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
-840 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move";
-850 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
-860 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
-870 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
-874 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(21,27);"Pick";
-880 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
-890 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
-900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
-910 COLOUR 21 : PRINT TAB(30,27);"V";     :COLOUR 19:PRINT TAB(33,27);"saVe";
-920 COLOUR 21 : PRINT TAB(30,28);"L";     :COLOUR 19:PRINT TAB(33,28);"Load";
+700 DEF PROCprintTitle
+705 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
+710 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
+715 COLOUR 8:PRINT TAB(35,0);VERSION$;
+720 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
+730 ENDPROC
+
+750 DEF PROCdrawScreen
+751 REM draw screen - titles, instructions.
+755 LOCAL I%
+760 CLS : VDU 23,0,192,0 : REM turn off logical screen scaling
+765 VDU 23, 1, 0 : REM disable text cursor
+770 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+772 PROCdrawPalette(PALX%,PALY%)
+774 PROCselectPaletteCol(COL%)
+776 PROCgridCursor(1)
+778 PROCdrawBitmapBoxes
+780 PROCprintTitle
+782 PROCprintHelp
+784 PROCshowFilename
+786 COLOUR 15
+790 ENDPROC
+
+800 DEF PROCprintHelp
+810 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
+820 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move";
+830 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
+840 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
+850 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
+860 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(21,27);"Pick";
+870 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
+880 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
+890 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
+900 COLOUR 21 : PRINT TAB(30,27);"V";     :COLOUR 19:PRINT TAB(33,27);"saVe";
+910 COLOUR 21 : PRINT TAB(30,28);"L";     :COLOUR 19:PRINT TAB(33,28);"Load";
 920 COLOUR 21 : PRINT TAB(30,29);"E";     :COLOUR 19:PRINT TAB(33,29);"Export";
-940 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
-945 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
+930 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
+940 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
 950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
 960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select Bitmap";
-965 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num Frames";
-970 PROCshowFilename
-980 COLOUR 15
-990 ENDPROC
+970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num Frames";
+980 ENDPROC
 
 1000 DEF PROCdrawGrid(w%,h%,x%,y%)
 1010 REM drawgrid in GRIDCOL%
@@ -533,37 +540,40 @@
 5280 =i%
 
 5300 DEF PROCconfig(conf_file$)
-5305 CLS
-5307 LOCAL in_str$, in_int%
-5310 VDU 23,0,192,0, 23, 1, 0 
-5320 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR"; : COLOUR 20:PRINT TAB(14,0);"for the Agon "; : COLOUR 8:PRINT TAB(35,0);VERSION$;
-5325 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
-5330 PROCreadConfigFile(conf_file$)
-5332 PROCprintConfig
-5334 COLOUR 31 : PRINT TAB(0,7);"C to configure, RETURN to continue."; : INPUT in_str$
-5336 IF in_str$<>"c" AND in_str$<>"C" THEN ENDPROC
-5340 COLOUR 31 : PRINT TAB(0,9);"Sprite Size 1) 16x16 2) 8x8"; : COLOUR 15 : INPUT in_int%
+5305 LOCAL in_str$, in_int%, l%
+5310 VDU 23,0,192,0,23,1,0 
+5315 CLS : PROCprintTitle : l%=4
+5320 PROCreadConfigFile(conf_file$)
+5325 l%=FNprintConfig(l%) : l%=l%+1
+5330 PRINT TAB(0,l%); :C. 15: PRINT "C"; : C. 21: PRINT" to configure, ";
+5332 C. 15:PRINT "RETURN";:C. 21:PRINT" to continue.";:C. 15: INPUT in_str$
+5335 IF in_str$<>"c" AND in_str$<>"C" THEN ENDPROC
+5340 l%=l%+2 : in_int%=FNinputOpts2(l%,"Sprite Size",1,"16x16","8x8") 
 5345 IF in_int%=2 THEN CONFIG_SIZE=2 ELSE CONFIG_SIZE=1
-5350 COLOUR 31 : PRINT TAB(0,11);"Joystick support (y/N)"; : COLOUR 15 : INPUT in_str$
-5355 IF in_str$="y" OR in_str$="Y" THEN CONFIG_JOY=1 ELSE CONFIG_JOY=0
-5360 COLOUR 31 : PRINT TAB(0,13);"1) Bitmaps or 2) Sprite sheet"; : COLOUR 15 : INPUT in_int%
+5350 l%=l%+1 : in_int%=FNinputOpts2(l%,"Joystick",2,"Yes","No") 
+5355 IF in_int%=1 THEN CONFIG_JOY=1 ELSE CONFIG_JOY=0
+5360 l%=l%+2 : in_int%=FNinputOpts2(l%, "Type",1,"Bitmaps","Sprite sheet") 
 5365 IF in_int%=2 THEN CONFIG_TYPE=2 ELSE CONFIG_TYPE=1
-5370 COLOUR 31 : PRINT TAB(0,15);"Press any key"; : INPUT in_int%
+5370 GOTO 5315 : REM this goto makes me sad
 5380 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
 5395 ENDPROC
 
-5400 DEF PROCprintConfig
-5410 COLOUR 31: PRINT TAB(0,3);"Sprite Size  : "; : COLOUR 10
+5400 DEF FNprintConfig(line%)
+5410 C. 21: PRINT TAB(0,line%);"Sprite Size  : "; : C. 19
 5420 IF CONFIG_SIZE=2 THEN PRINT "8x8" ELSE PRINT "16x16"
-5430 COLOUR 31: PRINT TAB(0,4);"Joystick     : "; : COLOUR 10
+5425 line%=line%+1
+5430 C. 21: PRINT TAB(0,line%);"Joystick     : "; : C. 19
 5440 IF CONFIG_JOY=1 THEN PRINT "Enabled" ELSE PRINT "Disabled"
-5450 COLOUR 31: PRINT TAB(0,5);"Editing type : "; : COLOUR 10
-5460 IF CONFIG_TYPE=1 THEN PRINT "Sprite Sheet" ELSE PRINT "Bitmaps"
-5490 ENDPROC
+5445 line%=line%+1
+5450 IF CONFIG_JOY=1 THEN C. 21 : PRINT "Joy Delay    : ";:C. 19 : PRINT ;CONFIG_JOYDELAY;: line%=line%+1
+5460 C. 21: PRINT TAB(0,line%);"Editing type : "; : C. 19
+5470 IF CONFIG_TYPE=2 THEN PRINT "Sprite Sheet" ELSE PRINT "Bitmaps"
+5480 line%=line%+1
+5490 =line%
 
 5500 DEF PROCreadConfigFile(f$)
 5510 ch%=OPENIN(f$)
-5515 IF ch%=0 THEN COLOUR 15 : PRINT TAB(0,2);"can't open file"; : ENDPROC
+5515 C. 7 : PRINT TAB(0,2);f$;": "; : IF ch%=0 THEN C. 9:PRINT "No file"; : ENDPROC
 5520 REPEAT
 5525 skip=0 : epos=0
 5530 INPUT#ch%,s$
@@ -583,6 +593,16 @@
 5640 IF var$="TYPE" THEN CONFIG_TYPE=VAL(val$)
 5650 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
 5690 ENDPROC
+
+5700 DEF FNinputOpts2(line%,base$,hili%,opt1$,opt2$)
+5710 C. 21: PRINT TAB(0,line%);base$;" ";
+5720 IF hili%=1 THEN COLOUR 15
+5725 PRINT "1) ";opt1$;" ";
+5727 C. 21
+5730 IF hili%=2 THEN COLOUR 15
+5735 PRINT "2) ";opt2$;" ";
+5780 COLOUR 15 : INPUT in%
+5790 =in% 
 
 6000 REM ------- Colour lookup Functions ------------
 6005 :
