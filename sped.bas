@@ -37,7 +37,7 @@
 155 SPX%=150 : SPY%=18 : REM sprite x/y position on screen
 157 BBOXX%=150 : BBOXY%=42 : REM top-left of bitmap boxes
 160 DIM BMX%(NumBitmaps%), BMY%(NumBitmaps%)
-165 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=BBOXX% + (W%+8)*I% : BMY%(I%)=BBOXY% : NEXT
+165 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=BBOXX% + 24*I% : BMY%(I%)=BBOXY% : NEXT
 
 170 REM declare data for grid
 175 DIM G%(W%*H%, NumBitmaps%) 
@@ -442,7 +442,7 @@
 3900 DEF PROCexportData8bit(f$, b%, ln%, alpha%)
 3906 PPL%=8 
 3910 SS$=STRING$(250," ") 
-3915 SS$=STR$(ln%)+" REM "+f$ 
+3915 SS$=STR$(ln%)+" REM "+f$+" "+STR$(W%)+"x"+STR$(H%)+" "
 3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes pp RGBA" ELSE SS$=SS$+" 3 bytes pp RGB" 
 3922 SS$=SS$+" bitmap num "+STR$(b%+1)
 3925 ln%=ln%+10
@@ -466,7 +466,7 @@
 4004 PIX%=0
 4006 PPL%=16
 4010 SS$=STRING$(250," ") 
-4015 SS$=STR$(ln%)+" REM "+f$+" 1 bytes pp RGBA2222" 
+4015 SS$=STR$(ln%)+" REM "+f$+" "+STR$(W%)+"x"+STR$(H%)+" 1 byte pp RGBA2222" 
 4022 SS$=SS$+" bitmap num "+STR$(b%+1)
 4025 ln%=ln%+10
 4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
