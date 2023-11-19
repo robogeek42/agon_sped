@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
 12 REM Thanks to discord user eightbitswide for the joystick code
-15 VERSION$="v0.14"
+15 VERSION$="v0.15"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
@@ -21,7 +21,9 @@
 75 DIM BSTAB%(3,3) : PROCloadBitshiftTable
 
 80 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
-85 PX%=0 : PY%=0 : COL%=1 : REM selected palette colour
+82 COL%=1 : REM selected palette colour
+84 PX%=0 : PY%=0 : REM position
+86 BFstate%=0 : DIM BFrect%(4) : REM block fill
 
 100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
 105 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
@@ -30,8 +32,8 @@
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
-135 NumBitmaps% = 6 : BM% = 0 : REM current bitmap
-140 NSF% = 3 : SF%=0 : REM Number of sprite frames and current frame
+135 NumBitmaps% = 7 : BM% = 0 : REM current bitmap
+140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
 148 LoopDir%=1
@@ -64,7 +66,7 @@
 265 IF CONFIG_JOY=1 JOY=GET(158) : BUTTON=GET(162) ELSE JOY=0 : BUTTON=0
 267 IF CONFIG_JOY=0 AND key=-1 GOTO 600
 270 IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 600 : REM skip to Until
-280 PROCgridCursor(0)
+280 PROCgridCursor(0) : PROCblockCursor(0)
 290 IF key = ASC("x") OR key=ASC("X") ISEXIT=1 : REM x=exit
 295 IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
 300 REM grid cursor movement
@@ -89,6 +91,7 @@
 430 IF key = ASC("c") OR key=ASC("C") THEN PROCclearGrid(0, BM%)
 440 IF key = ASC("f") OR key=ASC("F") THEN PROCclearGrid(COL%, BM%)
 450 IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
+455 IF key = ASC("b") OR key=ASC("B") THEN PROCblockFill
 460 REM V=save L=load
 470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
@@ -104,7 +107,7 @@
 560 IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
 565 IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
 570 PROCshowFilename("")
-580 PROCgridCursor(1)
+580 PROCgridCursor(1) : PROCblockCursor(1)
 
 600 REM Nokey GOTO comes here
 610 PROCshowSprite
@@ -145,20 +148,21 @@
 830 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
 840 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
 850 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
-860 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(21,27);"Pick";
-870 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
-880 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
-890 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
-900 COLOUR 21 : PRINT TAB(30,27);"V";     :COLOUR 19:PRINT TAB(33,27);"saVe";
-910 COLOUR 21 : PRINT TAB(30,28);"L";     :COLOUR 19:PRINT TAB(33,28);"Load";
-920 COLOUR 21 : PRINT TAB(30,29);"E";     :COLOUR 19:PRINT TAB(33,29);"Export";
+855 COLOUR 21 : PRINT TAB(16,26);"B";     :COLOUR 19:PRINT TAB(18,26);"Block fill";
+860 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(18,27);"Pick";
+870 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(18,28);"Fill";
+880 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(18,29);"Clear";
+890 COLOUR 21 : PRINT TAB(29,26);"X";     :COLOUR 19:PRINT TAB(32,26);"eXit";
+900 COLOUR 21 : PRINT TAB(29,27);"V";     :COLOUR 19:PRINT TAB(32,27);"saVe";
+910 COLOUR 21 : PRINT TAB(29,28);"L";     :COLOUR 19:PRINT TAB(32,28);"Load";
+920 COLOUR 21 : PRINT TAB(29,29);"E";     :COLOUR 19:PRINT TAB(32,29);"Export";
 930 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
 940 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
 950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
 960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
 970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
 975 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
-977 COLOUR 54 : PRINT TAB(38,12);CHR$(240)
+977 COLOUR 54 : PRINT TAB(36,12);CHR$(240)
 980 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
 995 ENDPROC
 
@@ -224,6 +228,7 @@
 1450 DEF PROCgridCursor(switch%)
 1455 REM draw gridcursor
 1460 LOCAL col%
+1465 IF BFstate%>0 THEN ENDPROC
 1470 col%=GRIDCOL% : REM off
 1480 IF switch%=1 THEN col%=CURSCOL% : REM on
 1490 PROCrect(GRIDX%+PX%*8, GRIDY%+PY%*8, 8, 8, col%)
@@ -337,7 +342,7 @@
 2250 DEF PROCtoggleLoopType
 2252 REM loop type : 0=left to right loop, 1=ping-pong
 2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=0
-2256 COLOUR 54 : PRINT TAB(38,12);CHR$(240+LoopType%)
+2256 COLOUR 54 : PRINT TAB(36,12);CHR$(240+LoopType%)
 2260 ENDPROC
 
 2270 DEF PROCsetLoopSpeed
@@ -677,64 +682,97 @@
 5820 VDU 23,241,0,&24,&42,&FF,&42,&24,0,0 : REM bidirectional
 5840 ENDPROC
 
-6000 REM ------- Colour lookup Functions ------------
-6005 :
+5899 REM -------  block fill -----------------------
+5900 DEF PROCblockFill
+5910 IF BFstate%=0 THEN BFstate%=1 
+5920 IF BFstate%=1 THEN BFrect%(0)=PX% : BFrect%(1)=PY% : BFrect%(2)=PX% : BFrect%(3)=PY%
+5930 IF BFstate%=2 THEN BFrect%(2)=PX% : BFrect%(3)=PY%
+5940 IF BFstate%=2 THEN PROCdoBlockFill : PROCblockCursor(0)
+5960 BFstate% = BFstate%+1 : IF BFstate%=3 THEN BFstate%=0
+5995 ENDPROC
 
-6010 DEF PROCloadLUT
-6011 REM Load the RGB Look up table
-6012 REM CL%() is BBC Col to RGBIndex
-6013 REM RGB%() is a packed array of the RGB colours
-6014 REM REVLU%() is a reverse lookup table to get the colour  
-6020 LOCAL I%
-6025 RESTORE 6210
-6030 FOR I%=0 TO 63 
-6040 READ CL%(I%)
-6050 NEXT
-6060 FOR I%=0 TO 63
-6070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2),REVLU%(I%)
-6080 NEXT
-6090 ENDPROC
+6000 DEF PROCdoBlockFill
+6005 IF BFrect%(2) < BFrect%(0) THEN stepx%=-1 ELSE stepx%=1
+6006 IF BFrect%(3) < BFrect%(1) THEN stepy%=-1 ELSE stepy%=1
+6010 FOR y%=BFrect%(1) TO BFrect%(3) STEP stepx%
+6020 FOR x%=BFrect%(0) TO BFrect%(2) STEP stepy%
+6030 G%(x%+W%*y%, BM%)=COL%
+6035 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, COL%)
+6040 NEXT x% : NEXT y%
+6050 PROCupdateBitmapFromGrid(BM%)
+6095 ENDPROC
 
-6200 REM Colour mapping to RGB 
-6210 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
-6220 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
-6230 DATA &01, &04, &05, &06, &07, &09, &0B, &0D
-6240 DATA &0E, &10, &11, &12, &13, &14, &16, &17
-6250 DATA &18, &19, &1A, &1B, &1C, &1D, &1E, &1F
-6260 DATA &21, &23, &24, &25, &26, &27, &29, &2B
-6270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
-6280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
-6300 REM - RGB colours with a reverse map
-6310 DATA &00, &00, &00,  0, &00, &00, &55, 16, &00, &00, &AA,  4, &00, &00, &FF, 12
-6320 DATA &00, &55, &00, 17, &00, &55, &55, 18, &00, &55, &AA, 19, &00, &55, &FF, 20
-6330 DATA &00, &AA, &00,  2, &00, &AA, &55, 21, &00, &AA, &AA,  6, &00, &AA, &FF, 22
-6340 DATA &00, &FF, &00, 10, &00, &FF, &55, 23, &00, &FF, &AA, 24, &00, &FF, &FF, 14
-6350 DATA &55, &00, &00, 25, &55, &00, &55, 26, &55, &00, &AA, 27, &55, &00, &FF, 28
-6360 DATA &55, &55, &00, 29, &55, &55, &55,  8, &55, &55, &AA, 30, &55, &55, &FF, 31
-6370 DATA &55, &AA, &00, 32, &55, &AA, &55, 33, &55, &AA, &AA, 34, &55, &AA, &FF, 35
-6380 DATA &55, &FF, &00, 36, &55, &FF, &55, 37, &55, &FF, &AA, 38, &55, &FF, &FF, 39
-6390 DATA &AA, &00, &00,  1, &AA, &00, &55, 40, &AA, &00, &AA,  5, &AA, &00, &FF, 41
-6400 DATA &AA, &55, &00, 42, &AA, &55, &55, 43, &AA, &55, &AA, 44, &AA, &55, &FF, 45
-6410 DATA &AA, &AA, &00,  3, &AA, &AA, &55, 46, &AA, &AA, &AA,  7, &AA, &AA, &FF, 47
-6420 DATA &AA, &FF, &00, 48, &AA, &FF, &55, 49, &AA, &FF, &AA, 50, &AA, &FF, &FF, 51
-6430 DATA &FF, &00, &00,  9, &FF, &00, &55, 52, &FF, &00, &AA, 53, &FF, &00, &FF, 13
-6440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
-6450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
-6460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
+6100 DEF PROCblockCursor(switch%)
+6105 LOCAL col%, xdiff%, ydiff%, x0%,y0%,x1%,y1%
+6107 IF BFstate%=0 THEN ENDPROC
+6110 BFrect%(2)=PX% : BFrect%(3)=PY% : REM new curs pos
+6115 x0%=BFrect%(0) : y0%=BFrect%(1) : x1%=BFrect%(2) : y1%=BFrect%(3)
+6120 IF BFrect%(0) > BFrect%(2) THEN BFstate%=0 : PROCgridCursor(1) :ENDPROC
+6125 IF BFrect%(1) > BFrect%(3) THEN BFstate%=0 : PROCgridCursor(1) :ENDPROC
+6130 xdiff% = x1%-x0% 
+6135 ydiff% = y1%-y0%
+6140 IF switch%=0 THEN col%=GRIDCOL% ELSE col%=COL%
+6150 PROCrect(GRIDX%+x0%*8, GRIDY%+y0%*8, 8*(xdiff%+1), 8*(ydiff%+1), col%)
+6160 ENDPROC
 
-6500 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
-6510 DEF PROCloadBitshiftTable
-6515 LOCAL col%,comp%
-6520 RESTORE 6610
-6530 FOR comp%=0 TO 3
-6540 FOR col%=0 TO 3
-6550 READ BSTAB%(col%,comp%) 
-6560 NEXT col%
-6570 NEXT comp%
-6595 ENDPROC
+8000 REM ------- Colour lookup Functions ------------
+8005 :
 
-6600 REM bitshift lookup 
-6610 DATA 0,1,2,3, 0,4,8,&0C, 0,&10,&20,&30, 0,&40,&80,&C0
+8010 DEF PROCloadLUT
+8011 REM Load the RGB Look up table
+8012 REM CL%() is BBC Col to RGBIndex
+8013 REM RGB%() is a packed array of the RGB colours
+8014 REM REVLU%() is a reverse lookup table to get the colour  
+8020 LOCAL I%
+8025 RESTORE 8210
+8030 FOR I%=0 TO 63 
+8040 READ CL%(I%)
+8050 NEXT
+8060 FOR I%=0 TO 63
+8070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2),REVLU%(I%)
+8080 NEXT
+8090 ENDPROC
+
+8200 REM Colour mapping to RGB 
+8210 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
+8220 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
+8230 DATA &01, &04, &05, &06, &07, &09, &0B, &0D
+8240 DATA &0E, &10, &11, &12, &13, &14, &16, &17
+8250 DATA &18, &19, &1A, &1B, &1C, &1D, &1E, &1F
+8260 DATA &21, &23, &24, &25, &26, &27, &29, &2B
+8270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
+8280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
+8300 REM - RGB colours with a reverse map
+8310 DATA &00, &00, &00,  0, &00, &00, &55, 16, &00, &00, &AA,  4, &00, &00, &FF, 12
+8320 DATA &00, &55, &00, 17, &00, &55, &55, 18, &00, &55, &AA, 19, &00, &55, &FF, 20
+8330 DATA &00, &AA, &00,  2, &00, &AA, &55, 21, &00, &AA, &AA,  6, &00, &AA, &FF, 22
+8340 DATA &00, &FF, &00, 10, &00, &FF, &55, 23, &00, &FF, &AA, 24, &00, &FF, &FF, 14
+8350 DATA &55, &00, &00, 25, &55, &00, &55, 26, &55, &00, &AA, 27, &55, &00, &FF, 28
+8360 DATA &55, &55, &00, 29, &55, &55, &55,  8, &55, &55, &AA, 30, &55, &55, &FF, 31
+8370 DATA &55, &AA, &00, 32, &55, &AA, &55, 33, &55, &AA, &AA, 34, &55, &AA, &FF, 35
+8380 DATA &55, &FF, &00, 36, &55, &FF, &55, 37, &55, &FF, &AA, 38, &55, &FF, &FF, 39
+8390 DATA &AA, &00, &00,  1, &AA, &00, &55, 40, &AA, &00, &AA,  5, &AA, &00, &FF, 41
+8400 DATA &AA, &55, &00, 42, &AA, &55, &55, 43, &AA, &55, &AA, 44, &AA, &55, &FF, 45
+8410 DATA &AA, &AA, &00,  3, &AA, &AA, &55, 46, &AA, &AA, &AA,  7, &AA, &AA, &FF, 47
+8420 DATA &AA, &FF, &00, 48, &AA, &FF, &55, 49, &AA, &FF, &AA, 50, &AA, &FF, &FF, 51
+8430 DATA &FF, &00, &00,  9, &FF, &00, &55, 52, &FF, &00, &AA, 53, &FF, &00, &FF, 13
+8440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
+8450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
+8460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
+
+8500 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
+8510 DEF PROCloadBitshiftTable
+8515 LOCAL col%,comp%
+8520 RESTORE 8610
+8530 FOR comp%=0 TO 3
+8540 FOR col%=0 TO 3
+8550 READ BSTAB%(col%,comp%) 
+8560 NEXT col%
+8570 NEXT comp%
+8595 ENDPROC
+
+8600 REM bitshift lookup 
+8610 DATA 0,1,2,3, 0,4,8,&0C, 0,&10,&20,&30, 0,&40,&80,&C0
 
 10000 REM  ------------ Error Handling -------------
 10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
