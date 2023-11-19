@@ -10,6 +10,7 @@
 37 REM ----- config in sped.ini -----
 40 CONFIG_SIZE=1 : CONFIG_JOY=0 : CONFIG_TYPE=0
 42 CONFIG_JOYDELAY=20
+44 DIM FEXT$(3) : FEXT$(1)=".rgb" : FEXT$(2)=".rgba" : FEXT$(2)=".dat" 
 50 PROCconfig("sped.ini")
 52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
 55 REM --------------------------------
@@ -55,7 +56,7 @@
 210 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
 220 REM PROCupdateScreenGrid(BM%)
 
-230 COLOR 15 : PRINT TAB(18,13);"       ";
+230 COLOR 15 : PRINT TAB(12,FLINE%);"       ";
 
 240 REM Main Loop
 250 REPEAT
@@ -131,11 +132,12 @@
 774 PROCselectPaletteCol(COL%)
 776 PROCgridCursor(1)
 778 PROCdrawBitmapBoxes
+779 PROCsetupChars
 780 PROCprintTitle
 782 PROCprintHelp
 784 PROCshowFilename("")
 786 COLOUR 15
-790 ENDPROC
+795 ENDPROC
 
 800 DEF PROCprintHelp
 810 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
@@ -156,6 +158,7 @@
 960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
 970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
 975 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
+977 COLOUR 54 : PRINT TAB(38,12);CHR$(240)
 980 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
 995 ENDPROC
 
@@ -334,6 +337,7 @@
 2250 DEF PROCtoggleLoopType
 2252 REM loop type : 0=left to right loop, 1=ping-pong
 2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=0
+2256 COLOUR 54 : PRINT TAB(38,12);CHR$(240+LoopType%)
 2260 ENDPROC
 
 2270 DEF PROCsetLoopSpeed
@@ -396,7 +400,7 @@
 3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
 3250 FOR N%=0 TO NumFrames%-1
 3255 @%=&01000202
-3260 F$ = Prefix$ + STR$(N%) + ".rgb"
+3260 F$ = Prefix$ + STR$(N%+1) + FEXT$(fmt%)
 3265 @%=&90A
 3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
 3275 IF SV%=1 THEN PROCsaveDataFile(F$, N%, fmt%) ELSE PROCloadDataFile(F$, N%, fmt%)
@@ -650,9 +654,12 @@
 5600 DEF PROCsetConfigVar(var$, val$)
 5610 REM PRINT "VAR:";var$;" VAL:";val$
 5620 IF var$="JOY" THEN CONFIG_JOY=VAL(val$)
-5630 IF var$="SIZE" THEN CONFIG_SIZE=VAL(val$)
-5640 IF var$="TYPE" THEN CONFIG_TYPE=VAL(val$)
-5650 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
+5625 IF var$="SIZE" THEN CONFIG_SIZE=VAL(val$)
+5630 IF var$="TYPE" THEN CONFIG_TYPE=VAL(val$)
+5635 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
+5640 IF var$="FEXT1" THEN FEXT$(1)=val$
+5642 IF var$="FEXT2" THEN FEXT$(3)=val$
+5644 IF var$="FEXT3" THEN FEXT$(3)=val$
 5690 ENDPROC
 
 5700 DEF FNinputOpts2(line%,base$,hili%,opt1$,opt2$)
@@ -664,6 +671,11 @@
 5735 PRINT "2) ";opt2$;" ";
 5780 COLOUR 15 : INPUT in%
 5790 =in% 
+
+5800 DEF PROCsetupChars
+5810 VDU 23,240,0,&20,&40,&FF,&40,&20,0,0 : REM left arrow
+5820 VDU 23,241,0,&24,&42,&FF,&42,&24,0,0 : REM bidirectional
+5840 ENDPROC
 
 6000 REM ------- Colour lookup Functions ------------
 6005 :
