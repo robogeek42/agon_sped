@@ -31,7 +31,9 @@
 130 REM multi-bitmap sprite setup
 135 NumBitmaps% = 6 : BM% = 0 : REM current bitmap
 140 NSF% = 3 : SF%=0 : REM Number of sprite frames and current frame
-145 Delay%=10 : Ctr%=Delay%
+144 SpriteDelay%=10 : Ctr%=SpriteDelay%
+146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
+148 LoopDir%=1
 
 150 REM Calc positions of sprite frame frames
 155 SPX%=150 : SPY%=18 : REM sprite x/y position on screen
@@ -43,7 +45,7 @@
 175 DIM G%(W%*H%, NumBitmaps%) 
 
 180 PROCdrawScreen
-182 COLOR 15 : PRINT TAB(18,13);"LOADING";
+182 COLOR 15 : PRINT TAB(12,FLINE%);"LOADING";
 185 PROCcreateSprite(W%,H%)
 
 190 FOR B%=0 TO NumBitmaps%-1
@@ -62,7 +64,7 @@
 267 IF CONFIG_JOY=0 AND key=-1 GOTO 600
 270 IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 600 : REM skip to Until
 280 PROCgridCursor(0)
-290 IF key = 120 OR key=120-32 ISEXIT=1 : REM x=exit
+290 IF key = ASC("x") OR key=ASC("X") ISEXIT=1 : REM x=exit
 295 IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
 300 REM grid cursor movement
 310 IF key = KEYG(0) AND PX%>0 THEN PX%=PX%-1 : REM left
@@ -80,23 +82,27 @@
 380 IF (key = KEYP(2) OR key=KEYP(2)-32) AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
 390 IF (key = KEYP(3) OR key=KEYP(3)-32) AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
 400 REM space = set colour, backspace = delete (set to 0), f=fill to current col
-410 IF key = 32 THEN PROCsetCol(PX%,PY%,COL%)
+410 IF key = 32 OR key = 13 THEN PROCsetCol(PX%,PY%,COL%)
 415 IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
-420 IF key = 127 OR key=127-32 THEN PROCsetCol(PX%,PY%,0)
-430 IF key = 99 OR key=99-32 THEN PROCclearGrid(0, BM%)
-440 IF key = 102 OR key=102-32 THEN PROCclearGrid(COL%, BM%)
-450 IF key = 112 OR key=112-32 THEN PROCpickCol
+420 IF key = 127  THEN PROCsetCol(PX%,PY%,0)
+430 IF key = ASC("c") OR key=ASC("C") THEN PROCclearGrid(0, BM%)
+440 IF key = ASC("f") OR key=ASC("F") THEN PROCclearGrid(COL%, BM%)
+450 IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
 460 REM V=save L=load
-470 IF key = 118 OR key=118-32 THEN PROCloadSaveFile(1) : REM V=saVe file 
-480 IF key = 108 OR key=108-32 THEN PROCloadSaveFile(0)
-490 IF key = 109 OR key=109-32 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-500 IF key = 110 OR key=110-32 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
-510 IF key = 110 OR key=110-32 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-520 IF key = 107 OR key=107-32 THEN PROCsetShortcutKey
-530 IF key >=49 AND key <=57 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
-540 IF key = 114 OR key = 114-32 THEN PROCsetFrames
-550 IF key = 101 OR key = 101-32 THEN PROCexport
-560 PROCshowFilename("")
+470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
+480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
+490 IF key = ASC("e") OR key = ASC("E") THEN PROCexport
+495 REM M,N select bitmap
+500 IF key = ASC("m") OR key=ASC("M") THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+510 IF key = ASC("n") OR key=ASC("N") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
+520 IF key = ASC("n") OR key=ASC("N") THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+530 IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
+535 REM Palette shortcut key, frames select and Loop/cycle type
+540 IF key >= ASC("1") AND key <= ASC("9") THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
+550 IF key = ASC("r") OR key = ASC("R") THEN PROCsetFrames
+560 IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
+565 IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
+570 PROCshowFilename("")
 580 PROCgridCursor(1)
 
 600 REM Nokey GOTO comes here
@@ -147,9 +153,11 @@
 930 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
 940 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
 950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
-960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select Bitmap";
-970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num Frames";
-980 ENDPROC
+960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
+970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
+975 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
+980 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
+995 ENDPROC
 
 1000 DEF PROCdrawGrid(w%,h%,x%,y%)
 1010 REM drawgrid in GRIDCOL%
@@ -304,7 +312,7 @@
 2105 LOCAL B%
 2110 FOR B%=0 TO NumBitmaps%-1
 2115 VDU 23,27,0,B%       : REM Select bitmap bmnum%
-2120 VDU 23,27,2,w%;h%;&FFFF;&FFFF; : REM create empty (black) bitmap
+2120 VDU 23,27,2,w%;h%;0;0; : REM create empty (black) bitmap
 2125 NEXT B%
 2130 VDU 23,27,4,0        : REM Select sprite 0
 2135 VDU 23,27,5          : REM Clear frames for current sprite
@@ -318,16 +326,30 @@
 
 2200 DEF PROCupdateSpriteBitmap(bmap%)
 2205 REM display bitmap and update sprite with bitmap
-2206 VDU 23,27,0,bmap%
-2210 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
-2240 VDU 23,27,15: REM Refresh the sprites
+2210 VDU 23,27,0,bmap%
+2220 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
+2230 VDU 23,27,15: REM Refresh the sprites
+2240 ENDPROC
+
+2250 DEF PROCtoggleLoopType
+2252 REM loop type : 0=left to right loop, 1=ping-pong
+2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=0
+2260 ENDPROC
+
+2270 DEF PROCsetLoopSpeed
+2275 LS=FNinputInt("Loop Speed (1-99)")
+2280 IF LS>0 AND LS<100 THEN SpriteDelay%=LS
 2290 ENDPROC
 
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
-2307 REM update frame number every Delay% screen refreshes
+2307 REM update frame number every SpriteDelay% screen refreshes
+2308 REM loop type : 0=left to right loop, 1=ping-pong
 2310 Ctr% = Ctr% - 1
-2320 IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
+2320 IF Ctr%=0 THEN SF%=SF%+LoopDir% 
+2322 IF Ctr%=0 AND LoopType%=0 AND SF%=NSF% THEN SF%=0
+2324 IF Ctr%=0 AND LoopType%=1 AND (SF%=NSF%-1 OR SF%=0) THEN LoopDir%=LoopDir% * -1
+2328 IF Ctr%=0 THEN Ctr%=SpriteDelay% 
 2330 VDU 23,27,10,SF% : REM select frame
 2340 *FX 19 : REM wait for refresh
 2345 VDU 23,27,15 : REM update sprites
@@ -361,7 +383,7 @@
 3110 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
 3120 IF fmt%<1 OR fmt%>3 THEN ENDPROC
 3130 yn$ = FNinputStr("Multiple Frames (y/N)")
-3140 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0, fmt%) : ENDPROC
+3140 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
 3150 F$ = FNinputStr("Enter filename:")
 3160 IF SV%=1 THEN PROCsaveDataFile(F$, BM%, fmt%) ELSE PROCloadDataFile(F$, BM%, fmt%)
 3170 PROCshowFilename(F$)
@@ -573,23 +595,29 @@
 5280 =i%
 
 5300 DEF PROCconfig(conf_file$)
-5305 LOCAL in_str$, in_int%, l%
-5310 VDU 23,0,192,0,23,1,0 
-5315 CLS : PROCprintTitle : l%=4
-5320 PROCreadConfigFile(conf_file$)
-5325 l%=FNprintConfig(l%) : l%=l%+1
-5330 PRINT TAB(0,l%); :C. 15: PRINT "C"; : C. 21: PRINT" to configure, ";
-5332 C. 15:PRINT "RETURN";:C. 21:PRINT" to continue.";:C. 15: INPUT in_str$
-5335 IF in_str$<>"c" AND in_str$<>"C" THEN ENDPROC
-5340 l%=l%+2 : in_int%=FNinputOpts2(l%,"Sprite Size",1,"16x16","8x8") 
-5345 IF in_int%=2 THEN CONFIG_SIZE=2 ELSE CONFIG_SIZE=1
-5350 l%=l%+1 : in_int%=FNinputOpts2(l%,"Joystick",2,"Yes","No") 
-5355 IF in_int%=1 THEN CONFIG_JOY=1 ELSE CONFIG_JOY=0
-5360 l%=l%+2 : in_int%=FNinputOpts2(l%, "Type",1,"Bitmaps","Sprite sheet") 
-5365 IF in_int%=2 THEN CONFIG_TYPE=2 ELSE CONFIG_TYPE=1
-5370 GOTO 5315 : REM this goto makes me sad
-5380 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
-5395 ENDPROC
+5305 VDU 23,0,192,0,23,1,0 
+5310 PROCreadConfigFile(conf_file$)
+5320 REPEAT
+5322 ret%=FNdoconfig(conf_file$)
+5324 CLS
+5326 UNTIL ret%=1
+5330 IF CONFIG_SIZE=2 THEN W%=8:H%=8 ELSE W%=16:H%=16
+5335 ENDPROC
+
+5340 DEF FNdoconfig(conf_file$)
+5342 LOCAL in_str$, in_int%, l%
+5344 PROCprintTitle : l%=4
+5346 l%=FNprintConfig(l%) : l%=l%+1
+5350 PRINT TAB(0,l%); :C. 15: PRINT "C"; : C. 21: PRINT" to configure, ";
+5355 C. 15:PRINT "RETURN";:C. 21:PRINT" to continue.";:C. 15: INPUT in_str$
+5360 IF in_str$<>"c" AND in_str$<>"C" THEN =1
+5365 l%=l%+2 : in_int%=FNinputOpts2(l%,"Sprite Size",1,"16x16","8x8") 
+5370 IF in_int%=2 THEN CONFIG_SIZE=2 ELSE CONFIG_SIZE=1
+5375 l%=l%+1 : in_int%=FNinputOpts2(l%,"Joystick",2,"Yes","No") 
+5380 IF in_int%=1 THEN CONFIG_JOY=1 ELSE CONFIG_JOY=0
+5385 l%=l%+2 : in_int%=FNinputOpts2(l%, "Type",1,"Bitmaps","Sprite sheet") 
+5390 IF in_int%=2 THEN CONFIG_TYPE=2 ELSE CONFIG_TYPE=1
+5395 =0
 
 5400 DEF FNprintConfig(line%)
 5410 C. 21: PRINT TAB(0,line%);"Sprite Size  : "; : C. 19
