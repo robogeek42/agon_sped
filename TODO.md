@@ -1,7 +1,5 @@
 # TODO List for Sprite Editor sped.bas
 
-- Export data as DATA statements
-- Opening dialog to choose bitmap size and number of frames
 - Implement a Full Help Page "h"
 - Implement a block fill
 - Implement a flood fill 
@@ -14,3 +12,5 @@ In v0.9
 - DONE : Rearrange screen to allow more than 4 frames
 - DONE : Dynamcally change number of sprite frames active
 - DONE : Use "p" to pick colour under cursor
+- DONE : Export data as DATA statements
+- DONE : Opening dialog to choose bitmap size and number of frames

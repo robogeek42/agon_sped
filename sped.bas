@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
 12 REM Thanks to discord user eightbitswide for the joystick code
-15 VERSION$="v0.13"
+15 VERSION$="v0.14"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
