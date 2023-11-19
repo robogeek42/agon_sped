@@ -456,7 +456,10 @@
 3810 h% = OPENOUT(f$)
 3820 FOR I%=0 TO (W%*H%)-1
 3830 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-3840 out% = &C0 OR RGB%(RGBIndex%*3+2)*16 OR RGB%(RGBIndex%*3+1)*4 OR RGB%(RGBIndex%*3)
+3832 DATR% =  RGB%(RGBIndex%*3) AND &03
+3834 DATG% =  RGB%(RGBIndex%*3+1) AND &03
+3836 DATB% =  RGB%(RGBIndex%*3+2) AND &03
+3840 out% = &C0 OR DATB%*16 OR DATG%*4 OR DATR%
 3845 BPUT#h%, out%
 3850 NEXT
 3860 CLOSE#h%
