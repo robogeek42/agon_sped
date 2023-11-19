@@ -5,123 +5,146 @@
    20 ON ERROR GOTO 10000
    25 DIM graphics 1024 : REM memory for file load 
    27 MB%=&40000 
-   28 TI%=20 :REM DELAY FOR JOYSTICK INPUT
    30 MODE 8
-   35 SW%=320 : SH%=240
-   45 GRIDX%=8 : GRIDY%=16 : W%=16 : H%=16
-   50 GRIDCOL%=8 : CURSCOL%=15 :ISEXIT=0
-   55 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
-   60 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
-   65 DIM BSTAB%(3,3) : PROCloadBitshiftTable
-   70 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
-   80 PX%=0 : PY%=0 : COL%=1 : REM selected palette colour
+   35 ISEXIT=0 : SW%=320 : SH%=240 
+   37 REM ----- config in sped.ini -----
+   40 CONFIG_SIZE=1 : CONFIG_JOY=0 : CONFIG_TYPE=0
+   42 CONFIG_JOYDELAY=20
+   44 DIM FEXT$(3) : FEXT$(1)=".rgb" : FEXT$(2)=".rgba" : FEXT$(2)=".dat" 
+   50 PROCconfig("sped.ini")
+   52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
+   55 REM --------------------------------
+   57 GRIDX%=8 : GRIDY%=16 : REM Grid position
+   60 GRIDCOL%=8 : CURSCOL%=15
+   65 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
+   70 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
+   75 DIM BSTAB%(3,3) : PROCloadBitshiftTable
+   80 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
+   85 PX%=0 : PY%=0 : COL%=1 : REM selected palette colour
   100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
   105 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
-  110 FILENAME$="" : FLINE%=24 : REM FLINE is line on which filename appears
+  110 FLINE%=24 : REM FLINE is line on which filename appears
   115 F$=STRING$(20," ") 
   120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
   130 REM multi-bitmap sprite setup
   135 NumBitmaps% = 6 : BM% = 0 : REM current bitmap
   140 NSF% = 3 : SF%=0 : REM Number of sprite frames and current frame
-  145 Delay%=10 : Ctr%=Delay%
+  144 SpriteDelay%=10 : Ctr%=SpriteDelay%
+  146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
+  148 LoopDir%=1
   150 REM Calc positions of sprite frame frames
   155 SPX%=150 : SPY%=18 : REM sprite x/y position on screen
   157 BBOXX%=150 : BBOXY%=42 : REM top-left of bitmap boxes
   160 DIM BMX%(NumBitmaps%), BMY%(NumBitmaps%)
-  165 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=BBOXX% + (W%+8)*I% : BMY%(I%)=BBOXY% : NEXT
+  165 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=BBOXX% + 24*I% : BMY%(I%)=BBOXY% : NEXT
   170 REM declare data for grid
   175 DIM G%(W%*H%, NumBitmaps%) 
   180 PROCdrawScreen
-  182 COLOUR 15 : PRINT TAB(18,13);"LOADING";
+  182 COLOUR 15 : PRINT TAB(12,FLINE%);"LOADING";
   185 PROCcreateSprite(W%,H%)
   190 FOR B%=0 TO NumBitmaps%-1
   195   FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : NEXT I%
   200 NEXT B%
   210 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
   220 REM PROCupdateScreenGrid(BM%)
-  230 COLOUR 15 : PRINT TAB(18,13);"       ";
+  230 COLOUR 15 : PRINT TAB(12,FLINE%);"       ";
   240 REM Main Loop
   250 REPEAT
   260   key=INKEY(0)
-  265   JOY=GET(158) : BUTTON=GET(162)
+  265   IF CONFIG_JOY=1 JOY=GET(158) : BUTTON=GET(162) ELSE JOY=0 : BUTTON=0
+  267   IF CONFIG_JOY=0 AND key=-1 GOTO 600
   270   IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 600 : REM skip to Until
   280   PROCgridCursor(0)
-  290   IF key = 120 OR key=120-32 ISEXIT=1 : REM x=exit
+  290   IF key = ASC("x") OR key=ASC("X") ISEXIT=1 : REM x=exit
   295   IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
   300   REM grid cursor movement
   310   IF key = KEYG(0) AND PX%>0 THEN PX%=PX%-1 : REM left
-  320   IF key = KEYG(1) AND PX%<15 THEN PX%=PX%+1 : REM right
+  320   IF key = KEYG(1) AND PX%<(W%-1) THEN PX%=PX%+1 : REM right
   330   IF key = KEYG(2) AND PY%>0 THEN PY%=PY%-1 : REM up
-  340   IF key = KEYG(3) AND PY%<15 THEN PY%=PY%+1 : REM down
+  340   IF key = KEYG(3) AND PY%<(H%-1) THEN PY%=PY%+1 : REM down
   341   REM joystick movement 
-  342   IF JOY>0 AND (JOY AND 223)=JOY AND PX%>0 THEN PX%=PX%-1 : TIME=0: REPEATUNTILTIME>TI% : REM LEFT
-  343   IF JOY>0 AND (JOY AND 127)=JOY AND PX%<15 THEN PX%=PX%+1 : TIME=0: REPEATUNTILTIME>TI% : REM RIGHT
-  344   IF JOY>0 AND (JOY AND 253)=JOY AND PY%>0 THEN PY%=PY%-1 : TIME=0 : REPEATUNTILTIME>TI% : REM UP
-  345   IF JOY>0 AND (JOY AND 247)=JOY AND PY%<15 THEN PY%=PY%+1 : TIME=0 : REPEATUNTILTIME>TI% :REM DOWN
+  342   IF JOY>0 AND (JOY AND 223)=JOY AND PX%>0 THEN PX%=PX%-1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM LEFT
+  343   IF JOY>0 AND (JOY AND 127)=JOY AND PX%<(W%-1) THEN PX%=PX%+1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM RIGHT
+  344   IF JOY>0 AND (JOY AND 253)=JOY AND PY%>0 THEN PY%=PY%-1 : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY : REM UP
+  345   IF JOY>0 AND (JOY AND 247)=JOY AND PY%<(H%-1) THEN PY%=PY%+1 : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY :REM DOWN
   350   REM colour select movement
-  360   IF key = KEYP(0) OR key=KEYP(0)-32 AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
-  370   IF key = KEYP(1) OR key=KEYP(1)-32 AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
-  380   IF key = KEYP(2) OR key=KEYP(2)-32 AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
-  390   IF key = KEYP(3) OR key=KEYP(3)-32 AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
+  360   IF (key = KEYP(0) OR key=KEYP(0)-32) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
+  370   IF (key = KEYP(1) OR key=KEYP(1)-32) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
+  380   IF (key = KEYP(2) OR key=KEYP(2)-32) AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
+  390   IF (key = KEYP(3) OR key=KEYP(3)-32) AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
   400   REM space = set colour, backspace = delete (set to 0), f=fill to current col
-  410   IF key = 32 THEN PROCsetCol(PX%,PY%,COL%)
+  410   IF key = 32 OR key = 13 THEN PROCsetCol(PX%,PY%,COL%)
   415   IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
-  420   IF key = 127 OR key=127-32 THEN PROCsetCol(PX%,PY%,0)
-  430   IF key = 99 OR key=99-32 THEN PROCclearGrid(0, BM%)
-  440   IF key = 102 OR key=102-32 THEN PROCclearGrid(COL%, BM%)
-  450   IF key = 112 OR key=112-32 THEN PROCpickCol
+  420   IF key = 127  THEN PROCsetCol(PX%,PY%,0)
+  430   IF key = ASC("c") OR key=ASC("C") THEN PROCclearGrid(0, BM%)
+  440   IF key = ASC("f") OR key=ASC("F") THEN PROCclearGrid(COL%, BM%)
+  450   IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
   460   REM V=save L=load
-  470   IF key = 118 OR key=118-32 THEN PROCsaveFile : REM V=saVe file 
-  480   IF key = 108 OR key=108-32 THEN PROCloadFile
-  490   IF key = 109 OR key=109-32 THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-  500   IF key = 110 OR key=110-32 THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
-  510   IF key = 110 OR key=110-32 THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-  520   IF key = 107 OR key=107-32 THEN PROCsetShortcutKey
-  530   IF key >=49 AND key <=57 THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
-  540   IF key = 114 OR key = 114-32 THEN PROCsetFrames
-  550   IF key = 101 OR key = 101-32 THEN PROCexport
-  560   PROCshowFilename
+  470   IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
+  480   IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
+  490   IF key = ASC("e") OR key = ASC("E") THEN PROCexport
+  495   REM M,N select bitmap
+  500   IF key = ASC("m") OR key=ASC("M") THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+  510   IF key = ASC("n") OR key=ASC("N") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
+  520   IF key = ASC("n") OR key=ASC("N") THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+  530   IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
+  535   REM Palette shortcut key, frames select and Loop/cycle type
+  540   IF key >= ASC("1") AND key <= ASC("9") THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
+  550   IF key = ASC("r") OR key = ASC("R") THEN PROCsetFrames
+  560   IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
+  565   IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
+  570   PROCshowFilename("")
   580   PROCgridCursor(1)
   600   REM Nokey GOTO comes here
   610   PROCshowSprite
-  670 UNTIL ISEXIT = 1
-  680 GOTO 10000
+  620 UNTIL ISEXIT = 1
+  630 GOTO 10000
   695 END
   699 REM ------ Static Screen Update Functions ---------------
-  700 DEF PROCdrawScreen
-  705 REM draw screen - titles, instructions.
-  710 LOCAL I%
-  715 CLS
-  720 VDU 23,0,192,0 : REM turn off logical screen scaling
-  730 VDU 23, 1, 0 : REM disable text cursor
-  740 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
-  745 PROCdrawPalette(PALX%,PALY%)
-  750 PROCselectPaletteCol(COL%)
-  760 PROCgridCursor(1)
-  770 PROCdrawBitmapBoxes
-  800 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
-  810 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
-  814 COLOUR 8:PRINT TAB(35,0);VERSION$;
-  820 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
-  830 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
-  840 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move";
-  850 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
-  860 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
-  870 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
-  874 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(21,27);"Pick";
-  880 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
-  890 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
-  900 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
-  910 COLOUR 21 : PRINT TAB(30,27);"V";     :COLOUR 19:PRINT TAB(33,27);"saVe";
+  700 DEF PROCprintTitle
+  705 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
+  710 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
+  715 COLOUR 8:PRINT TAB(35,0);VERSION$;
+  720 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
+  730 ENDPROC
+  750 DEF PROCdrawScreen
+  751 REM draw screen - titles, instructions.
+  755 LOCAL I%
+  760 CLS : VDU 23,0,192,0 : REM turn off logical screen scaling
+  765 VDU 23, 1, 0 : REM disable text cursor
+  770 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+  772 PROCdrawPalette(PALX%,PALY%)
+  774 PROCselectPaletteCol(COL%)
+  776 PROCgridCursor(1)
+  778 PROCdrawBitmapBoxes
+  779 PROCsetupChars
+  780 PROCprintTitle
+  782 PROCprintHelp
+  784 PROCshowFilename("")
+  786 COLOUR 15
+  795 ENDPROC
+  800 DEF PROCprintHelp
+  810 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
+  820 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move";
+  830 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
+  840 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
+  850 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
+  860 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(21,27);"Pick";
+  870 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(21,28);"Fill";
+  880 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(21,29);"Clear";
+  890 COLOUR 21 : PRINT TAB(30,26);"X";     :COLOUR 19:PRINT TAB(33,26);"eXit";
+  900 COLOUR 21 : PRINT TAB(30,27);"V";     :COLOUR 19:PRINT TAB(33,27);"saVe";
+  910 COLOUR 21 : PRINT TAB(30,28);"L";     :COLOUR 19:PRINT TAB(33,28);"Load";
   920 COLOUR 21 : PRINT TAB(30,29);"E";     :COLOUR 19:PRINT TAB(33,29);"Export";
-  940 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
-  945 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
+  930 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
+  940 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
   950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
-  960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select Bitmap";
-  965 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num Frames";
-  970 PROCshowFilename
-  980 COLOUR 15
-  990 ENDPROC
+  960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
+  970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
+  975 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
+  977 COLOUR 54 : PRINT TAB(38,12);CHR$(240)
+  980 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
+  995 ENDPROC
  1000 DEF PROCdrawGrid(w%,h%,x%,y%)
  1010 REM drawgrid in GRIDCOL%
  1020 GCOL 0,GRIDCOL%
@@ -161,12 +184,12 @@
  1270 ENDPROC
  1300 DEF PROCselectPaletteCol(c%)
  1310 REM select colour in palette - move the white select box
- 1320 REM x% = COL% DIV PALH% : y% = COL% MOD PALH% : REM vertical
- 1325 x% = COL% MOD PALW% : y% = COL% DIV PALW% : REM horizontal
+ 1315 REM unselect previous colour
+ 1320 x% = COL% MOD PALW% : y% = COL% DIV PALW% : REM horizontal
  1330 PROCrect(PALX%+x%*10, PALY%+y%*10, 8, 8, 0)
+ 1335 REM select new colour
  1340 COL%=c%
- 1350 REM x% = COL% DIV PALH% : y% = COL% MOD PALH% : REM vertical
- 1355 x% = COL% MOD PALW% : y% = COL% DIV PALW% : REM horizontal
+ 1350 x% = COL% MOD PALW% : y% = COL% DIV PALW% : REM horizontal
  1360 PROCrect(PALX%+x%*10, PALY%+y%*10, 8, 8, 15)
  1365 PROCprintColour(27,2)
  1370 ENDPROC
@@ -260,7 +283,7 @@
  2105 LOCAL B%
  2110 FOR B%=0 TO NumBitmaps%-1
  2115   VDU 23,27,0,B%       : REM Select bitmap bmnum%
- 2120   VDU 23,27,2,w%;h%;&FFFF;&FFFF; : REM create empty (black) bitmap
+ 2120   VDU 23,27,2,w%;h%;0;0; : REM create empty (black) bitmap
  2125 NEXT B%
  2130 VDU 23,27,4,0        : REM Select sprite 0
  2135 VDU 23,27,5          : REM Clear frames for current sprite
@@ -273,15 +296,28 @@
  2190 ENDPROC
  2200 DEF PROCupdateSpriteBitmap(bmap%)
  2205 REM display bitmap and update sprite with bitmap
- 2206 VDU 23,27,0,bmap%
- 2210 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
- 2240 VDU 23,27,15: REM Refresh the sprites
+ 2210 VDU 23,27,0,bmap%
+ 2220 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
+ 2230 VDU 23,27,15: REM Refresh the sprites
+ 2240 ENDPROC
+ 2250 DEF PROCtoggleLoopType
+ 2252 REM loop type : 0=left to right loop, 1=ping-pong
+ 2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=0
+ 2256 COLOUR 54 : PRINT TAB(38,12);CHR$(240+LoopType%)
+ 2260 ENDPROC
+ 2270 DEF PROCsetLoopSpeed
+ 2275 LS=FNinputInt("Loop Speed (1-99)")
+ 2280 IF LS>0 AND LS<100 THEN SpriteDelay%=LS
  2290 ENDPROC
  2300 DEF PROCshowSprite
  2305 REM show sprite animation
- 2307 REM update frame number every Delay% screen refreshes
+ 2307 REM update frame number every SpriteDelay% screen refreshes
+ 2308 REM loop type : 0=left to right loop, 1=ping-pong
  2310 Ctr% = Ctr% - 1
- 2320 IF Ctr%=0 THEN Ctr%=Delay% : SF%=SF%+1 : IF SF%=NSF% THEN SF%=0
+ 2320 IF Ctr%=0 THEN SF%=SF%+LoopDir% 
+ 2322 IF Ctr%=0 AND LoopType%=0 AND SF%=NSF% THEN SF%=0
+ 2324 IF Ctr%=0 AND LoopType%=1 AND (SF%=NSF%-1 OR SF%=0) THEN LoopDir%=LoopDir% * -1
+ 2328 IF Ctr%=0 THEN Ctr%=SpriteDelay% 
  2330 VDU 23,27,10,SF% : REM select frame
  2340 *FX 19 : REM wait for refresh
  2345 VDU 23,27,15 : REM update sprites
@@ -297,76 +333,89 @@
  2540 PROCdrawBitmapBoxes
  2550 ENDPROC
  2999 REM ------ File Handling --------------------------------
- 3000 DEF PROCloadFile
- 3005 REM ask for a filename and load the data in RGB raw format with no headers
- 3006 REM ask if they want to load multiple frames
- 3010 yn$ = FNinputStr("Multiple Frames (y/N)")
- 3020 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(0) : ENDPROC
- 3030 PRINT TAB(0,FLINE%);SPC(40);
- 3040 COLOUR 31 : PRINT TAB(0,FLINE%);"Enter filename:";
- 3050 COLOUR 15 : INPUT F$;
- 3060 PROCloadDataFile(F$, BM%)
- 3070 FILENAME$ = F$ : PROCshowFilename
+ 3000 DEF PROCshowFilename(fn$)
+ 3005 REM just display filename in status bar
+ 3010 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
+ 3020 PRINT TAB(0,FLINE%);SPC(40);
+ 3030 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);fn$;
  3090 ENDPROC
- 3100 DEF PROCsaveFile
- 3105 REM ask for a filename and save the data in RGB raw format with no headers
- 3106 REM ask if they want to save multiple frames
- 3110 yn$ = FNinputStr("Multiple Frames (y/N)")
- 3120 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(1) : ENDPROC
- 3125 REM ask for a filename
- 3130 F$ = FNinputStr("Enter filename:")
- 3150 REM need an exists/overwrite dialog ...
- 3160 PROCsaveDataFile(F$, BM%)
- 3170 FILENAME$ = F$ : PROCshowFilename
+ 3100 DEF PROCloadSaveFile(SV%)
+ 3105 REM ask for a filename and load/save the data in RGB raw format with no headers
+ 3106 REM ask if they want to load/save multiple frames
+ 3110 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
+ 3120 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+ 3130 yn$ = FNinputStr("Multiple Frames (y/N)")
+ 3140 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
+ 3150 F$ = FNinputStr("Enter filename:")
+ 3160 IF SV%=1 THEN PROCsaveDataFile(F$, BM%, fmt%) ELSE PROCloadDataFile(F$, BM%, fmt%)
+ 3170 PROCshowFilename(F$)
  3190 ENDPROC
- 3200 DEF PROCmultiple(SV%)
+ 3200 DEF PROCmultiple(SV%, fmt%)
  3205 LOCAL Prefix$, NumFrames%, N%
  3210 Prefix$ = FNinputStr("Enter prefix:")
  3220 NumFrames% = FNinputInt("Enter num frames:")
  3240 IF NumFrames% <1 OR NumFrames% > NumBitmaps% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
  3250 FOR N%=0 TO NumFrames%-1
  3255   @%=&01000202
- 3260   F$ = Prefix$ + STR$(N%) + ".rgb"
+ 3260   F$ = Prefix$ + STR$(N%+1) + FEXT$(fmt%)
  3265   @%=&90A
  3270   COLOUR 7 : PRINT TAB(22,FLINE%);F$;
- 3275   IF SV%=1 THEN PROCsaveDataFile(F$, N%) ELSE PROCloadDataFile(F$, N%)
+ 3275   IF SV%=1 THEN PROCsaveDataFile(F$, N%, fmt%) ELSE PROCloadDataFile(F$, N%, fmt%)
  3280 NEXT N%
  3284 BM%=0 : PROCdrawBitmapBoxes
  3286 IF SV%=0 THEN BM%=0 : PROCupdateScreenGrid(BM%) : NSF%=NumFrames% : SF%=0 : PROCdrawBitmapBoxes
  3290 ENDPROC 
- 3400 DEF PROCshowFilename
- 3405 REM just display filename in status bar
- 3410 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
- 3420 PRINT TAB(0,FLINE%);SPC(40);
- 3430 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);FILENAME$;
+ 3300 DEF PROCloadDataFile(f$, b%, fmt%)
+ 3301 REM this loads file to internal memory and copies it out to the sprite
+ 3302 LOCAL col%, I%, IND%
+ 3305 PROCshowFilename(f$)
+ 3310 FHAN%=OPENIN(f$)
+ 3315 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(32,FLINE%);"No file"; : ENDPROC
+ 3320 IF fmt%=1 sz%=(W%*H%*3)
+ 3321 IF fmt%=2 sz%=(W%*H%*4)
+ 3322 IF fmt%=3 sz%=(W%*H%*1)
+ 3325 FLEN%=EXT#FHAN% : IF FLEN%<>sz% THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid";: CLOSE#FHAN%: ENDPROC
+ 3330 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
+ 3335 CLOSE#FHAN%
+ 3340 LSTR$="LOAD " + f$ + " " + STR$(MB%+graphics)
+ 3345 OSCLI(LSTR$) : PRINT TAB(24,FLINE%);"LOADED";
+ 3350 IF fmt%=1 THEN PROCloadDataFile8bit(f$, b%, 0)
+ 3355 IF fmt%=2 THEN PROCloadDataFile8bit(f$, b%, 1)
+ 3360 IF fmt%=3 THEN PROCloadDataFile2bit(f$, b%)
+ 3365 PRINT TAB(24,FLINE%);"COPIED";
+ 3370 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+ 3380 PROCupdateBitmapFromGrid(b%)
+ 3390 ENDPROC
+ 3400 DEF PROCloadDataFile8bit(f$, b%, alpha%)
+ 3405 IF alpha%=1 THEN datw%=4 ELSE datw%=3
+ 3410 FOR I%=0 TO (W%*H%)-1
+ 3420   DATR% = ?(graphics+I%*datw%+0) DIV 85
+ 3425   DATG% = ?(graphics+I%*datw%+1) DIV 85
+ 3430   DATB% = ?(graphics+I%*datw%+2) DIV 85
+ 3440   IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
+ 3450   col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
+ 3460   G%(I%, b%) = col% : x%=I% MOD W% : y%=I% DIV W%
+ 3465   PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+ 3470 NEXT I%
  3490 ENDPROC
- 3500 DEF PROCloadDataFile(f$, b%)
- 3501 REM this loads file to internal memory and copies it out to the sprite
- 3502 LOCAL col%, I%, IND%
- 3505 PRINT TAB(0,FLINE%);SPC(40); : COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);f$;
- 3510 FHAN%=OPENIN(f$)
- 3520 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(32,FLINE%);"No file"; : ENDPROC
- 3530 FLEN%=EXT#FHAN% : IF FLEN%<>(W%*H%*3) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid";: CLOSE#FHAN%: ENDPROC
- 3535 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
- 3540 CLOSE#FHAN%
- 3545 LSTR$="LOAD " + f$ + " " + STR$(MB%+graphics)
- 3550 OSCLI(LSTR$)
- 3555 PRINT TAB(24,FLINE%);"LOADED";
- 3560 FOR I%=0 TO (W%*H%)-1
- 3570   DATR% = ?(graphics+I%*3+0) DIV 85
- 3572   DATG% = ?(graphics+I%*3+1) DIV 85
- 3574   DATB% = ?(graphics+I%*3+2) DIV 85
- 3580   IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
- 3590   col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
- 3600   G%(I%, b%) = col% : x%=I% MOD W% : y%=I% DIV W%
- 3610   PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
- 3620 NEXT I%
- 3625 PRINT TAB(24,FLINE%);"COPIED";
- 3630 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
- 3640 PROCupdateBitmapFromGrid(b%)
+ 3500 DEF PROCloadDataFile2bit(f$, b%)
+ 3510 FOR I%=0 TO (W%*H%)-1
+ 3520   DATR% = ?(graphics+I%) AND &03
+ 3525   DATG% = (?(graphics+I%) AND &0C) DIV 4
+ 3530   DATB% = (?(graphics+I%) AND &30) DIV 16
+ 3540   IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
+ 3550   col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
+ 3560   G%(I%, b%) = col% : x%=I% MOD W% : y%=I% DIV W%
+ 3565   PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+ 3570 NEXT I%
+ 3590 ENDPROC
+ 3650 DEF PROCsaveDataFile(f$, b%, fmt%)
+ 3660 IF fmt%=1 THEN PROCsaveDataFile8bit(f$, b%, 0)
+ 3670 IF fmt%=2 THEN PROCsaveDataFile8bit(f$, b%, 1)
+ 3680 IF fmt%=3 THEN PROCsaveDataFile2bit(f$, b%)
  3690 ENDPROC
- 3700 DEF PROCsaveDataFile(f$, b%)
- 3701 REM save raw data to a file. RGB format with no header.
+ 3700 DEF PROCsaveDataFile8bit(f$, b%, alpha%)
+ 3701 REM save raw data to a file. RGB or RGBA 8bit format with no header.
  3705 LOCAL I%, RGBIndex%, h%
  3710 h% = OPENOUT(f$)
  3720 FOR I%=0 TO (W%*H%)-1
@@ -374,17 +423,28 @@
  3740   BPUT#h%, RGB%(RGBIndex%*3)
  3742   BPUT#h%, RGB%(RGBIndex%*3+1)
  3744   BPUT#h%, RGB%(RGBIndex%*3+2)
+ 3746   IF alpha%=1 THEN  BPUT#h%, &FF
  3750 NEXT
  3760 CLOSE#h%
  3790 ENDPROC
- 3800 DEF PROCprintFileLine(FH%, S$)
- 3810 REM dos line endings
- 3820 PRINT#FH%,S$ : BPUT#FH%,10
- 3830 ENDPROC
+ 3800 DEF PROCsaveDataFile2bit(f$, b%)
+ 3801 REM save raw data to a file. RGBA2222 format with no header.
+ 3805 LOCAL I%, RGBIndex%, h%
+ 3810 h% = OPENOUT(f$)
+ 3820 FOR I%=0 TO (W%*H%)-1
+ 3830   RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
+ 3832   DATR% =  RGB%(RGBIndex%*3) AND &03
+ 3834   DATG% =  RGB%(RGBIndex%*3+1) AND &03
+ 3836   DATB% =  RGB%(RGBIndex%*3+2) AND &03
+ 3840   out% = &C0 OR DATB%*16 OR DATG%*4 OR DATR%
+ 3845   BPUT#h%, out%
+ 3850 NEXT
+ 3860 CLOSE#h%
+ 3890 ENDPROC
  3900 DEF PROCexportData8bit(f$, b%, ln%, alpha%)
  3906 PPL%=8 
  3910 SS$=STRING$(250," ") 
- 3915 SS$=STR$(ln%)+" REM "+f$ 
+ 3915 SS$=STR$(ln%)+" REM "+f$+" "+STR$(W%)+"x"+STR$(H%)+" "
  3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes pp RGBA" ELSE SS$=SS$+" 3 bytes pp RGB" 
  3922 SS$=SS$+" bitmap num "+STR$(b%+1)
  3925 ln%=ln%+10
@@ -407,7 +467,7 @@
  4004 PIX%=0
  4006 PPL%=16
  4010 SS$=STRING$(250," ") 
- 4015 SS$=STR$(ln%)+" REM "+f$+" 1 bytes pp RGBA2222" 
+ 4015 SS$=STR$(ln%)+" REM "+f$+" "+STR$(W%)+"x"+STR$(H%)+" 1 byte pp RGBA2222" 
  4022 SS$=SS$+" bitmap num "+STR$(b%+1)
  4025 ln%=ln%+10
  4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
@@ -428,23 +488,29 @@
  4090 ENDPROC
  4100 DEF PROCexport
  4105 LOCAL frames% : frames%=1
- 4110 yn$ = FNinputStr("Multiple Frames (y/N)")
- 4115 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
- 4120 IF mult%=1 THEN frames% = FNinputInt("Num frames")
- 4124 IF mult%=1 AND (frames%<1 OR frames%>NumBitmaps%) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
- 4126 IF mult%=1 THEN bmfrm%=0 : bmto%=frames%-1 ELSE bmfrm%=BM% : bmto%=BM% 
- 4130 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
- 4135 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+ 4110 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
+ 4115 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+ 4120 yn$ = FNinputStr("Multiple Frames (y/N)")
+ 4125 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
+ 4130 IF mult%=1 THEN frames% = FNinputInt("Num frames")
+ 4134 IF mult%=1 AND (frames%<1 OR frames%>NumBitmaps%) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+ 4136 IF mult%=1 THEN bmfrm%=0 : bmto%=frames%-1 ELSE bmfrm%=BM% : bmto%=BM% 
  4140 F$ = FNinputStr("Enter filename:")
- 4145 IF F$ = "" THEN PROCshowFilename : ENDPROC
+ 4145 IF F$ = "" THEN PROCshowFilename(F$) : ENDPROC
  4150 Line% = FNinputInt("Line number:")
  4160 FOR bmid%=bmfrm% TO bmto% 
  4165   COLOUR 10:PRINT TAB(32,FLINE%);"bm=";STR$(bmid%+1);
- 4170   IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%):Line%=Line%+10*W%+10 ELSE PROCexportData8bit(F$, bmid%, Line%, fmt%-1):Line%=Line%+20*W%+10
+ 4170   IF fmt%=1 THEN PROCexportData8bit(F$, bmid%, Line%, 0): Line%=Line%+20*W%+10
+ 4172   IF fmt%=2 THEN PROCexportData8bit(F$, bmid%, Line%, 1): Line%=Line%+20*W%+10
+ 4174   IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%): Line%=Line%+10*W%+10 
  4180 NEXT bmid%
  4182 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
- 4185 PROCshowFilename
+ 4185 PROCshowFilename(F$)
  4190 ENDPROC
+ 4200 DEF PROCprintFileLine(FH%, S$)
+ 4210 REM dos line endings
+ 4220 PRINT#FH%,S$ : BPUT#FH%,10
+ 4230 ENDPROC
  5000 REM ------- Generic Functions ------------
  5005 REM PROCfilledRect draw a filled rectangle
  5010 DEF PROCfilledRect(x%,y%,w%,h%,c%)
@@ -473,6 +539,78 @@
  5260 PRINT TAB(0,FLINE%);SPC(40);
  5270 COLOUR 31 : PRINT TAB(0,FLINE%);prompt$; : COLOUR 15 : INPUT i%
  5280 =i%
+ 5300 DEF PROCconfig(conf_file$)
+ 5305 VDU 23,0,192,0,23,1,0 
+ 5310 PROCreadConfigFile(conf_file$)
+ 5320 REPEAT
+ 5322   ret%=FNdoconfig(conf_file$)
+ 5324   CLS
+ 5326 UNTIL ret%=1
+ 5330 IF CONFIG_SIZE=2 THEN W%=8:H%=8 ELSE W%=16:H%=16
+ 5335 ENDPROC
+ 5340 DEF FNdoconfig(conf_file$)
+ 5342 LOCAL in_str$, in_int%, l%
+ 5344 PROCprintTitle : l%=4
+ 5346 l%=FNprintConfig(l%) : l%=l%+1
+ 5350 PRINT TAB(0,l%); :COLOUR 15: PRINT "C"; : COLOUR 21: PRINT" to configure, ";
+ 5355 COLOUR 15:PRINT "RETURN";:COLOUR 21:PRINT" to continue.";:COLOUR 15: INPUT in_str$
+ 5360 IF in_str$<>"c" AND in_str$<>"C" THEN =1
+ 5365 l%=l%+2 : in_int%=FNinputOpts2(l%,"Sprite Size",1,"16x16","8x8") 
+ 5370 IF in_int%=2 THEN CONFIG_SIZE=2 ELSE CONFIG_SIZE=1
+ 5375 l%=l%+1 : in_int%=FNinputOpts2(l%,"Joystick",2,"Yes","No") 
+ 5380 IF in_int%=1 THEN CONFIG_JOY=1 ELSE CONFIG_JOY=0
+ 5385 l%=l%+2 : in_int%=FNinputOpts2(l%, "Type",1,"Bitmaps","Sprite sheet") 
+ 5390 IF in_int%=2 THEN CONFIG_TYPE=2 ELSE CONFIG_TYPE=1
+ 5395 =0
+ 5400 DEF FNprintConfig(line%)
+ 5410 COLOUR 21: PRINT TAB(0,line%);"Sprite Size  : "; : COLOUR 19
+ 5420 IF CONFIG_SIZE=2 THEN PRINT "8x8" ELSE PRINT "16x16"
+ 5425 line%=line%+1
+ 5430 COLOUR 21: PRINT TAB(0,line%);"Joystick     : "; : COLOUR 19
+ 5440 IF CONFIG_JOY=1 THEN PRINT "Enabled" ELSE PRINT "Disabled"
+ 5445 line%=line%+1
+ 5450 IF CONFIG_JOY=1 THEN COLOUR 21 : PRINT "Joy Delay    : ";:COLOUR 19 : PRINT ;CONFIG_JOYDELAY;: line%=line%+1
+ 5460 COLOUR 21: PRINT TAB(0,line%);"Editing type : "; : COLOUR 19
+ 5470 IF CONFIG_TYPE=2 THEN PRINT "Sprite Sheet" ELSE PRINT "Bitmaps"
+ 5480 line%=line%+1
+ 5490 =line%
+ 5500 DEF PROCreadConfigFile(f$)
+ 5510 ch%=OPENIN(f$)
+ 5515 COLOUR 7 : PRINT TAB(0,2);f$;": "; : IF ch%=0 THEN COLOUR 9:PRINT "No file"; : ENDPROC
+ 5520 REPEAT
+ 5525   skip=0 : epos=0
+ 5530   INPUT#ch%,s$
+ 5535   IF MID$(s$,1,1)="#" skip=1
+ 5540   IF skip=0 THEN r%=INSTR(s$,CHR$(&0A)) IF r%>0 THEN  s$=MID$(s$,r%+1)
+ 5545   IF skip=0 THEN epos=INSTR(s$,"=")
+ 5550   IF skip=0 AND epos>0 THEN var$=MID$(s$,1,epos-1) : val$=MID$(s$,epos+1)
+ 5555   IF skip=0 AND epos>0 THEN PROCsetConfigVar(var$, val$)
+ 5560 UNTIL EOF#ch%
+ 5585 CLOSE#ch%
+ 5590 ENDPROC
+ 5600 DEF PROCsetConfigVar(var$, val$)
+ 5610 REM PRINT "VAR:";var$;" VAL:";val$
+ 5620 IF var$="JOY" THEN CONFIG_JOY=VAL(val$)
+ 5625 IF var$="SIZE" THEN CONFIG_SIZE=VAL(val$)
+ 5630 IF var$="TYPE" THEN CONFIG_TYPE=VAL(val$)
+ 5635 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
+ 5640 IF var$="FEXT1" THEN FEXT$(1)=val$
+ 5642 IF var$="FEXT2" THEN FEXT$(3)=val$
+ 5644 IF var$="FEXT3" THEN FEXT$(3)=val$
+ 5690 ENDPROC
+ 5700 DEF FNinputOpts2(line%,base$,hili%,opt1$,opt2$)
+ 5710 COLOUR 21: PRINT TAB(0,line%);base$;" ";
+ 5720 IF hili%=1 THEN COLOUR 15
+ 5725 PRINT "1) ";opt1$;" ";
+ 5727 COLOUR 21
+ 5730 IF hili%=2 THEN COLOUR 15
+ 5735 PRINT "2) ";opt2$;" ";
+ 5780 COLOUR 15 : INPUT in%
+ 5790 =in% 
+ 5800 DEF PROCsetupChars
+ 5810 VDU 23,240,0,&20,&40,&FF,&40,&20,0,0 : REM left arrow
+ 5820 VDU 23,241,0,&24,&42,&FF,&42,&24,0,0 : REM bidirectional
+ 5840 ENDPROC
  6000 REM ------- Colour lookup Functions ------------
  6005 :
  6010 DEF PROCloadLUT
