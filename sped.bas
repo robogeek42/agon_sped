@@ -23,7 +23,8 @@
 80 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
 82 COL%=1 : REM selected palette colour
 84 PX%=0 : PY%=0 : REM position
-86 BFstate%=0 : DIM BFrect%(4) : REM block fill
+86 BSstate%=0 : DIM BSrect%(4) : REM block select
+87 HaveBlock%=0 : DIM BLOCK%(W%*H%) : BlockW%=0:BlockH%=0 : REM copied block
 
 100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
 105 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
@@ -88,10 +89,12 @@
 410 IF key = 32 OR key = 13 THEN PROCsetCol(PX%,PY%,COL%)
 415 IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
 420 IF key = 127  THEN PROCsetCol(PX%,PY%,0)
-430 IF key = ASC("c") OR key=ASC("C") THEN PROCclearGrid(0, BM%)
-440 IF key = ASC("f") OR key=ASC("F") THEN PROCclearGrid(COL%, BM%)
+430 IF (key = ASC("c") OR key=ASC("C")) AND BSstate%=0 THEN PROCclearGrid(0, BM%)
+435 IF (key = ASC("c") OR key=ASC("C")) AND BSstate%>0 THEN PROCblockFill(0, BM%)
+440 IF (key = ASC("f") OR key=ASC("F")) AND BSstate%=0 THEN PROCclearGrid(COL%, BM%)
+445 IF (key = ASC("f") OR key=ASC("F")) AND BSstate%>0 THEN PROCblockFill(COL%, BM%)
 450 IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
-455 IF key = ASC("b") OR key=ASC("B") THEN PROCblockFill
+455 IF key = ASC("b") OR key=ASC("B") THEN PROCmarkBlock
 460 REM V=save L=load
 470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
@@ -104,10 +107,13 @@
 535 REM Palette shortcut key, frames select and Loop/cycle type
 540 IF key >= ASC("1") AND key <= ASC("9") THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
 550 IF key = ASC("r") OR key = ASC("R") THEN PROCsetFrames
-560 IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
-565 IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
-570 PROCshowFilename("")
-580 PROCgridCursor(1) : PROCblockCursor(1)
+555 IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
+560 IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
+565 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
+570 IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
+585 PROCshowFilename("")
+587 COLOUR 19 : IF HaveBlock%=1 THEN PRINT TAB(24,2);"*"; ELSE PRINT TAB(24,2);" ";
+590 PROCgridCursor(1) : PROCblockCursor(1)
 
 600 REM Nokey GOTO comes here
 610 PROCshowSprite
@@ -148,7 +154,7 @@
 830 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
 840 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
 850 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
-855 COLOUR 21 : PRINT TAB(16,26);"B";     :COLOUR 19:PRINT TAB(18,26);"Block fill";
+855 COLOUR 21 : PRINT TAB(16,26);"B";     :COLOUR 19:PRINT TAB(18,26);"Block";
 860 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(18,27);"Pick";
 870 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(18,28);"Fill";
 880 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(18,29);"Clear";
@@ -228,7 +234,7 @@
 1450 DEF PROCgridCursor(switch%)
 1455 REM draw gridcursor
 1460 LOCAL col%
-1465 IF BFstate%>0 THEN ENDPROC
+1465 IF BSstate%>0 THEN ENDPROC
 1470 col%=GRIDCOL% : REM off
 1480 IF switch%=1 THEN col%=CURSCOL% : REM on
 1490 PROCrect(GRIDX%+PX%*8, GRIDY%+PY%*8, 8, 8, col%)
@@ -683,37 +689,70 @@
 5840 ENDPROC
 
 5899 REM -------  block fill -----------------------
-5900 DEF PROCblockFill
-5910 IF BFstate%=0 THEN BFstate%=1 
-5920 IF BFstate%=1 THEN BFrect%(0)=PX% : BFrect%(1)=PY% : BFrect%(2)=PX% : BFrect%(3)=PY%
-5930 IF BFstate%=2 THEN BFrect%(2)=PX% : BFrect%(3)=PY%
-5940 IF BFstate%=2 THEN PROCdoBlockFill : PROCblockCursor(0)
-5960 BFstate% = BFstate%+1 : IF BFstate%=3 THEN BFstate%=0
+5900 DEF PROCmarkBlock
+5910 IF BSstate%=0 THEN BSstate%=1 : HaveBlock%=0
+5920 IF BSstate%=1 THEN BSrect%(0)=PX% : BSrect%(1)=PY% : BSrect%(2)=PX% : BSrect%(3)=PY%
+5930 IF BSstate%=2 THEN BSrect%(2)=PX% : BSrect%(3)=PY%
+5960 BSstate% = BSstate%+1 : IF BSstate%=3 THEN BSstate%=0
 5995 ENDPROC
 
-6000 DEF PROCdoBlockFill
-6005 IF BFrect%(2) < BFrect%(0) THEN stepx%=-1 ELSE stepx%=1
-6006 IF BFrect%(3) < BFrect%(1) THEN stepy%=-1 ELSE stepy%=1
-6010 FOR y%=BFrect%(1) TO BFrect%(3) STEP stepx%
-6020 FOR x%=BFrect%(0) TO BFrect%(2) STEP stepy%
-6030 G%(x%+W%*y%, BM%)=COL%
-6035 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, COL%)
+6000 DEF PROCdoBlockFill(c%,b%)
+6005 IF BSrect%(2) < BSrect%(0) THEN stepx%=-1 ELSE stepx%=1
+6006 IF BSrect%(3) < BSrect%(1) THEN stepy%=-1 ELSE stepy%=1
+6010 FOR y%=BSrect%(1) TO BSrect%(3) STEP stepx%
+6020 FOR x%=BSrect%(0) TO BSrect%(2) STEP stepy%
+6030 G%(x%+W%*y%, b%)=c%
+6035 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
 6040 NEXT x% : NEXT y%
-6050 PROCupdateBitmapFromGrid(BM%)
+6050 PROCupdateBitmapFromGrid(b%)
 6095 ENDPROC
 
 6100 DEF PROCblockCursor(switch%)
 6105 LOCAL col%, xdiff%, ydiff%, x0%,y0%,x1%,y1%
-6107 IF BFstate%=0 THEN ENDPROC
-6110 BFrect%(2)=PX% : BFrect%(3)=PY% : REM new curs pos
-6115 x0%=BFrect%(0) : y0%=BFrect%(1) : x1%=BFrect%(2) : y1%=BFrect%(3)
-6120 IF BFrect%(0) > BFrect%(2) THEN BFstate%=0 : PROCgridCursor(1) :ENDPROC
-6125 IF BFrect%(1) > BFrect%(3) THEN BFstate%=0 : PROCgridCursor(1) :ENDPROC
+6107 IF BSstate%=0 THEN ENDPROC
+6110 BSrect%(2)=PX% : BSrect%(3)=PY% : REM new curs pos
+6115 x0%=BSrect%(0) : y0%=BSrect%(1) : x1%=BSrect%(2) : y1%=BSrect%(3)
+6120 IF BSrect%(0) > BSrect%(2) THEN BSstate%=0 : PROCgridCursor(1) :ENDPROC
+6125 IF BSrect%(1) > BSrect%(3) THEN BSstate%=0 : PROCgridCursor(1) :ENDPROC
 6130 xdiff% = x1%-x0% 
 6135 ydiff% = y1%-y0%
 6140 IF switch%=0 THEN col%=GRIDCOL% ELSE col%=COL%
 6150 PROCrect(GRIDX%+x0%*8, GRIDY%+y0%*8, 8*(xdiff%+1), 8*(ydiff%+1), col%)
 6160 ENDPROC
+
+6200 DEF PROCblockFill(c%,b%)
+6210 IF BSstate%=0 THEN ENDPROC
+6220 IF BSstate%=2 THEN BSrect%(2)=PX% : BSrect%(3)=PY%
+6230 IF BSstate%=2 THEN PROCdoBlockFill(c%,b%) : PROCblockCursor(0)
+6240 BSstate%=0
+6260 ENDPROC
+
+6300 DEF PROCcopyBlock(b%)
+6305 LOCAL x%,y%,xx%,yy%
+6310 IF BSstate%=0 THEN ENDPROC
+6315 IF BSstate%=2 THEN BSrect%(2)=PX% : BSrect%(3)=PY%
+6320 FOR y%=BSrect%(1) TO BSrect%(3)
+6330 FOR x%=BSrect%(0) TO BSrect%(2)
+6340 xx%=x%-BSrect%(0) : yy%=y%-BSrect%(1)
+6350 BLOCK%(xx%+W%*yy%)=G%(x%+W%*y%, b%)
+6360 NEXT x% : NEXT y%
+6370 BlockW%=BSrect%(3)-BSrect%(1)+1
+6375 BlockH%=BSrect%(2)-BSrect%(0)+1
+6380 HaveBlock%=1 : BSstate%=0
+6390 ENDPROC
+
+6400 DEF PROCpasteBlock(b%)
+6405 LOCAL x%,y%,xx%,yy%
+6410 IF HaveBlock%=0 THEN ENDPROC
+6420 FOR y%=0 TO BlockW%-1
+6430 FOR x%=0 TO BlockH%-1
+6440 xx%=x%+PX% : yy%=y%+PY%
+6450 IF xx%<W% AND yy%<H% THEN G%(xx%+yy%*H%, b%)=BLOCK%(x%+y%*H%)
+6455 IF xx%<W% AND yy%<H% THEN PROCfilledRect(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, 6, 6, BLOCK%(x%+y%*H%))
+6460 NEXT x% : NEXT y%
+6470 PROCupdateBitmapFromGrid(b%)
+6490 ENDPROC
+
 
 8000 REM ------- Colour lookup Functions ------------
 8005 :
