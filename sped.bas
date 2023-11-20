@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
 12 REM Thanks to discord user eightbitswide for the joystick code
-15 VERSION$="v0.15"
+15 VERSION$="v0.16"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 27 MB%=&40000 
@@ -11,6 +11,7 @@
 40 CONFIG_SIZE=1 : CONFIG_JOY=0 : CONFIG_TYPE=0
 42 CONFIG_JOYDELAY=20
 44 DIM FEXT$(3) : FEXT$(1)=".rgb" : FEXT$(2)=".rgba" : FEXT$(2)=".dat" 
+46 C1=21: C2=19: C3=15 : REM Help colours
 50 PROCconfig("sped.ini")
 52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
 55 REM --------------------------------
@@ -112,7 +113,7 @@
 565 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
 570 IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
 585 PROCshowFilename("")
-587 COLOUR 19 : IF HaveBlock%=1 THEN PRINT TAB(24,2);"*"; ELSE PRINT TAB(24,2);" ";
+587 COLOUR 19 : IF HaveBlock%=1 THEN PRINT TAB(13,28);"*"; ELSE PRINT TAB(13,28);" ";
 590 PROCgridCursor(1) : PROCblockCursor(1)
 
 600 REM Nokey GOTO comes here
@@ -149,28 +150,50 @@
 795 ENDPROC
 
 800 DEF PROCprintHelp
-810 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
-820 COLOUR 21 : PRINT TAB(0,26);"Cursor"; :COLOUR 19:PRINT TAB(7,26);"Move";
-830 COLOUR 21 : PRINT TAB(0,27);"WASD  "; :COLOUR 19:PRINT TAB(7,27);"Colour";
-840 COLOUR 21 : PRINT TAB(0 ,28);"Space"; :COLOUR 19:PRINT TAB(7,28);"Set";
-850 COLOUR 21 : PRINT TAB(0, 29);"Backsp";:COLOUR 19:PRINT TAB(7,29);"Unset";
-855 COLOUR 21 : PRINT TAB(16,26);"B";     :COLOUR 19:PRINT TAB(18,26);"Block";
-860 COLOUR 21 : PRINT TAB(16,27);"P";     :COLOUR 19:PRINT TAB(18,27);"Pick";
-870 COLOUR 21 : PRINT TAB(16,28);"F";     :COLOUR 19:PRINT TAB(18,28);"Fill";
-880 COLOUR 21 : PRINT TAB(16,29);"C";     :COLOUR 19:PRINT TAB(18,29);"Clear";
-890 COLOUR 21 : PRINT TAB(29,26);"X";     :COLOUR 19:PRINT TAB(32,26);"eXit";
-900 COLOUR 21 : PRINT TAB(29,27);"V";     :COLOUR 19:PRINT TAB(32,27);"saVe";
-910 COLOUR 21 : PRINT TAB(29,28);"L";     :COLOUR 19:PRINT TAB(32,28);"Load";
-920 COLOUR 21 : PRINT TAB(29,29);"E";     :COLOUR 19:PRINT TAB(32,29);"Export";
-930 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
-940 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
-950 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
-960 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
-970 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
-975 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
-977 COLOUR 54 : PRINT TAB(36,12);CHR$(240)
-980 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
-995 ENDPROC
+802 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
+804 PROCprintMainHelp(26)
+806 PROCprintSecondHelp(26)
+808 PROCprintBitmapHelp
+810 PROCshortcutBox
+812 COLOUR 54 : PRINT TAB(36,12);CHR$(240) : REM direction arrow
+820 ENDPROC
+
+830 DEF PROCshort(x,y,pre$,hi$,post$)
+832 C1=21: C2=19: C3=15
+833 PRINT TAB(x,y);
+834 C. C2: PRINT pre$;
+836 REM C. C1: PRINT "[";: C. C3: PRINT hi$;: C. C1: PRINT "]";
+837 C. C1: PRINT hi$;
+838 C. C2: PRINT post$;
+840 ENDPROC
+
+850 DEF PROCprintMainHelp(v%)
+852 C. C1 : PRINT TAB(0,v%+0);"Cursor";: C. C2: PRINT TAB(6,v%+0);"Move";
+854 C. C1 : PRINT TAB(0,v%+1);"WASD";:   C. C2: PRINT TAB(6,v%+1);"Colour";
+856 C. C1 : PRINT TAB(0,v%+2);"Spc";:    C. C2: PRINT TAB(6,v%+2);"Set";
+858 C. C1 : PRINT TAB(0,v%+3);"Bksp";:   C. C2: PRINT TAB(6,v%+3);"Del";
+860 GCOL 0,15 : MOVE 13*8-4,26*8 : DRAW 13*8-4,31*8+2
+865 ENDPROC
+
+880 DEF PROCprintSecondHelp(v%)
+882 PROCshort(14,v%,"","L","oad"): PROCshort(20,v%,"sa","V","e"): PROCshort(27,v%,"","E","xport"): PROCshort(35,v%,"e","X","it")
+884 PROCshort(14,v%+1,"","P","ick"): PROCshort(20,v%+1,"","C","lear"): PROCshort(27,v%+1,"","F","ill")
+888 PROCshort(14,v%+2,"","B","lock") : PROCshort(20,v%+2,"","-"," copy") : PROCshort(27,v%+2,"","="," paste")
+890 ENDPROC
+
+910 DEF PROCshortcutBox
+920 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
+922 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
+924 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
+930 ENDPROC
+
+940 DEF PROCprintBitmapHelp
+945 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
+950 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
+955 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
+960 COLOUR 54 : PRINT TAB(36,12);CHR$(240)
+965 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
+970 ENDPROC
 
 1000 DEF PROCdrawGrid(w%,h%,x%,y%)
 1010 REM drawgrid in GRIDCOL%
