@@ -1,8 +1,0 @@
-10 MODE 0
-20 PRINT "Enter File to Open"; 
-30 INPUT FILENAME$
-40 HANDLE%=OPENIN(FILENAME$)
-50 IF HANDLE% = 0 THEN PRINT "No such file" : GOTO 20
-60 L% = EXT#HANDLE%
-70 PRINT "File ";FILENAME$;" is ";L%;" bytes long"
-80 CLOSE#HANDLE%
