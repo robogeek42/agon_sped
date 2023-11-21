@@ -309,7 +309,7 @@
 1702 REM update of bitmap must be done separately
 1710 LOCAL i%
 1720 FOR i%=0 TO W%*H%-1
-1730 U%(i%) = G%(i%) : G%(i%, bmap%)=col%
+1730 U%(i%) = G%(i%, bmap%) : G%(i%, bmap%)=col%
 1740 NEXT i%
 1745 REM fast clear all cells
 1750 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
