@@ -95,7 +95,7 @@
 440 IF (key = ASC("f") OR key=ASC("F")) AND BSstate%=0 THEN PROCclearGrid(COL%, BM%)
 445 IF (key = ASC("f") OR key=ASC("F")) AND BSstate%>0 THEN PROCblockFill(COL%, BM%)
 450 IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
-455 IF key = ASC("b") OR key=ASC("B") THEN PROCmarkBlock
+455 IF key = ASC("b") OR key=ASC("B") THEN PROCmarkBlock 
 460 REM V=save L=load
 470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
@@ -113,7 +113,7 @@
 565 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
 570 IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
 585 PROCshowFilename("")
-587 COLOUR 19 : IF HaveBlock%=1 THEN PRINT TAB(13,28);"*"; ELSE PRINT TAB(13,28);" ";
+587 PROCprintSecondHelp(26)
 590 PROCgridCursor(1) : PROCblockCursor(1)
 
 600 REM Nokey GOTO comes here
@@ -178,8 +178,10 @@
 880 DEF PROCprintSecondHelp(v%)
 882 PROCshort(14,v%,"","L","oad"): PROCshort(20,v%,"sa","V","e"): PROCshort(27,v%,"","E","xport"): PROCshort(35,v%,"e","X","it")
 884 PROCshort(14,v%+1,"","P","ick"): PROCshort(20,v%+1,"","C","lear"): PROCshort(27,v%+1,"","F","ill")
-888 PROCshort(14,v%+2,"","B","lock") : PROCshort(20,v%+2,"","-"," copy") : PROCshort(27,v%+2,"","="," paste")
-890 ENDPROC
+888 PROCshort(14,v%+2,"","B","lock") 
+890 IF BSstate%>0 THEN PROCshort(20,v%+2,"","-"," copy") ELSE PRINT TAB(20,v%+2);SPC(7);
+892 IF HaveBlock% THEN PROCshort(27,v%+2,"","="," paste") ELSE PRINT TAB(27,v%+2);SPC(8);
+895 ENDPROC
 
 910 DEF PROCshortcutBox
 920 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
