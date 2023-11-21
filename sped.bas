@@ -111,8 +111,8 @@
 550 IF key = ASC("r") OR key = ASC("R") THEN PROCsetFrames
 555 IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
 560 IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
-562 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
-564 IF key = ASC("-") AND BSstate%=0 THEN PROCcopyImage(BM%)
+562 IF key = ASC("-") AND BSstate%=0 THEN PROCcopyImage(BM%)
+564 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
 570 IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
 572 IF key = ASC("#") AND BSstate%=0 THEN PROCmirrorSelected(0,0,W%-1,H%-1,BM%)
 574 IF key = ASC("#") AND BSstate%>0 THEN PROCmirrorSelected(BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
@@ -791,14 +791,10 @@
 6390 ENDPROC
 
 6400 DEF PROCcopyImage(b%)
-6405 LOCAL x%,y%,xx%,yy%
-6420 FOR y%=0 TO H%-1
-6430 FOR x%=0 TO W%-1
-6450 BLOCK%(x%+W%*y%)=G%(x%+W%*y%, b%)
-6460 NEXT x% : NEXT y%
-6470 BlockW%=W%
-6475 BlockH%=H%
-6480 HaveBlock%=1 : BSstate%=0
+6405 LOCAL i%
+6420 FOR i%=0 TO W%*H%-1 : BLOCK%(i%)=G%(i%, b%) : NEXT i%
+6430 BlockW%=W% : BlockH%=H%
+6440 HaveBlock%=1 : BSstate%=0
 6490 ENDPROC
 
 6500 DEF PROCpasteBlock(b%)
