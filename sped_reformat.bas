@@ -1,7 +1,7 @@
    10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
    11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
    12 REM Thanks to discord user eightbitswide for the joystick code
-   15 VERSION$="v0.15"
+   15 VERSION$="v0.17"
    20 ON ERROR GOTO 10000
    25 DIM graphics 1024 : REM memory for file load 
    27 MB%=&40000 
@@ -43,11 +43,12 @@
   165 FOR I%=0 TO NumBitmaps%-1 : BMX%(I%)=BBOXX% + 24*I% : BMY%(I%)=BBOXY% : NEXT
   170 REM declare data for grid
   175 DIM G%(W%*H%, NumBitmaps%) 
+  176 DIM U%(W%*H%) : REM for a simple, one level Undo
   180 PROCdrawScreen
   182 COLOUR 15 : PRINT TAB(12,FLINE%);"LOADING";
   185 PROCcreateSprite(W%,H%)
   190 FOR B%=0 TO NumBitmaps%-1
-  195   FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : NEXT I%
+  195   FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : U%(I%)=0 : NEXT I%
   200 NEXT B%
   210 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
   220 REM PROCupdateScreenGrid(BM%)
@@ -85,7 +86,7 @@
   440   IF (key = ASC("f") OR key=ASC("F")) AND BSstate%=0 THEN PROCclearGrid(COL%, BM%)
   445   IF (key = ASC("f") OR key=ASC("F")) AND BSstate%>0 THEN PROCblockFill(COL%, BM%)
   450   IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
-  455   IF key = ASC("b") OR key=ASC("B") THEN PROCmarkBlock
+  455   IF key = ASC("b") OR key=ASC("B") THEN PROCmarkBlock 
   460   REM V=save L=load
   470   IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
   480   IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
@@ -100,11 +101,18 @@
   550   IF key = ASC("r") OR key = ASC("R") THEN PROCsetFrames
   555   IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
   560   IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
-  565   IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
+  562   IF key = ASC("-") AND BSstate%=0 THEN PROCcopyImage(BM%)
+  564   IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
   570   IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
-  585   PROCshowFilename("")
-  587   COLOUR 19 : IF HaveBlock%=1 THEN PRINT TAB(13,28);"*"; ELSE PRINT TAB(13,28);" ";
-  590   PROCgridCursor(1) : PROCblockCursor(1)
+  572   IF key = ASC("#") AND BSstate%=0 THEN PROCmirrorSelected(0,0,W%-1,H%-1,BM%)
+  574   IF key = ASC("#") AND BSstate%>0 THEN PROCmirrorSelected(BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
+  576   IF key = ASC("~") AND BSstate%=0 THEN PROCflipSelected(0,0,W%-1,H%-1,BM%)
+  578   IF key = ASC("~") AND BSstate%>0 THEN PROCflipSelected(BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
+  580   IF key = ASC("u") OR key = ASC("U") THEN PROCdoUndo(BM%)
+  585   IF HaveBlock%=1 THEN COLOUR 15 : PRINT TAB(13,28);"*"; ELSE PRINT TAB(13,28);" ";
+  590   PROCshowFilename("")
+  592   PROCprintSecondHelp(26)
+  594   PROCgridCursor(1) : PROCblockCursor(1)
   600   REM Nokey GOTO comes here
   610   PROCshowSprite
   620 UNTIL ISEXIT = 1
@@ -158,9 +166,12 @@
   865 ENDPROC
   880 DEF PROCprintSecondHelp(v%)
   882 PROCshort(14,v%,"","L","oad"): PROCshort(20,v%,"sa","V","e"): PROCshort(27,v%,"","E","xport"): PROCshort(35,v%,"e","X","it")
-  884 PROCshort(14,v%+1,"","P","ick"): PROCshort(20,v%+1,"","C","lear"): PROCshort(27,v%+1,"","F","ill")
-  888 PROCshort(14,v%+2,"","B","lock") : PROCshort(20,v%+2,"","-"," copy") : PROCshort(27,v%+2,"","="," paste")
-  890 ENDPROC
+  884 PROCshort(14,v%+1,"","P","ick"): PROCshort(20,v%+1,"","C","lear"): PROCshort(27,v%+1,"","F","ill") : PROCshort(35,v%+1,"","U","ndo")
+  888 PROCshort(14,v%+2,"","B","lock") 
+  890 PROCshort(20,v%+2,"","-","copy")
+  892 IF HaveBlock% THEN PROCshort(27,v%+2,"","=","paste") ELSE PRINT TAB(27,v%+2);SPC(8);
+  894 PROCshort(20,v%+3,"","~","flip") : PROCshort(27,v%+3,"","#","mirror")
+  900 ENDPROC
   910 DEF PROCshortcutBox
   920 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
   922 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
@@ -256,18 +267,17 @@
  1605 REM   update    <--  Load/Clear -->  update -->  refresh
  1650 DEF PROCsetCol(x%,y%,c%)
  1655 REM set colour in screen grid AND Data Grid G%
- 1660 G%(x%+y%*W%, BM%)=c%
+ 1660 ind%=x%+y%*W%: U%(ind%)=G%(ind%, BM%) 
+ 1665 G%(ind%, BM%)=c%
  1670 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
  1680 PROCupdateBitmapPixel(BM%, x%, y%, c%)
  1690 ENDPROC
  1700 DEF PROCclearGrid(col%, bmap%)
  1701 REM clear grid to a colour (Screen and Data Grids)
  1702 REM update of bitmap must be done separately
- 1710 LOCAL i%, j%
- 1720 FOR i%=0 TO W%-1
- 1725   FOR j%=0 TO H%-1
- 1730     G%(i%+j%*W%, bmap%)=col%
- 1735   NEXT j%
+ 1710 LOCAL i%
+ 1720 FOR i%=0 TO W%*H%-1
+ 1730   U%(i%) = G%(i%, bmap%) : G%(i%, bmap%)=col%
  1740 NEXT i%
  1745 REM fast clear all cells
  1750 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
@@ -361,6 +371,18 @@
  2530 IF K >= 1 AND K <= NumBitmaps% THEN NSF%=K : SF%=0
  2540 PROCdrawBitmapBoxes
  2550 ENDPROC
+ 2599 REM ------ undo -----------------------------------------
+ 2600 DEF PROCcopyToUndo(b%)
+ 2610 LOCAL i%
+ 2620 FOR i%=0 TO W%*H%-1 : U%(i%) = G%(i%, b%) : NEXT i%
+ 2630 ENDPROC
+ 2700 DEF PROCdoUndo(b%)
+ 2710 LOCAL i%,t%
+ 2715 REM swap undo/grid so using undo again, restores state
+ 2720 FOR i%=0 TO W%*H%-1 : t% = G%(i%,b%): G%(i%,b%) = U%(i%): U%(i%) = t% : NEXT i%
+ 2730 PROCupdateScreenGrid(b%)
+ 2740 PROCupdateBitmapFromGrid(b%)
+ 2790 ENDPROC
  2999 REM ------ File Handling --------------------------------
  3000 DEF PROCshowFilename(fn$)
  3005 REM just display filename in status bar
@@ -416,8 +438,9 @@
  3380 PROCupdateBitmapFromGrid(b%)
  3390 ENDPROC
  3400 DEF PROCloadDataFile8bit(f$, b%, alpha%)
- 3405 IF alpha%=1 THEN datw%=4 ELSE datw%=3
- 3410 FOR I%=0 TO (W%*H%)-1
+ 3405 PROCcopyToUndo(b%)
+ 3410 IF alpha%=1 THEN datw%=4 ELSE datw%=3
+ 3415 FOR I%=0 TO (W%*H%)-1
  3420   DATR% = ?(graphics+I%*datw%+0) DIV 85
  3425   DATG% = ?(graphics+I%*datw%+1) DIV 85
  3430   DATB% = ?(graphics+I%*datw%+2) DIV 85
@@ -648,10 +671,9 @@
  5960 BSstate% = BSstate%+1 : IF BSstate%=3 THEN BSstate%=0
  5995 ENDPROC
  6000 DEF PROCdoBlockFill(c%,b%)
- 6005 IF BSrect%(2) < BSrect%(0) THEN stepx%=-1 ELSE stepx%=1
- 6006 IF BSrect%(3) < BSrect%(1) THEN stepy%=-1 ELSE stepy%=1
- 6010 FOR y%=BSrect%(1) TO BSrect%(3) STEP stepx%
- 6020   FOR x%=BSrect%(0) TO BSrect%(2) STEP stepy%
+ 6005 PROCcopyToUndo(b%)
+ 6010 FOR y%=BSrect%(1) TO BSrect%(3)
+ 6020   FOR x%=BSrect%(0) TO BSrect%(2)
  6030     G%(x%+W%*y%, b%)=c%
  6035     PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
  6040   NEXT x% : NEXT y%
@@ -684,21 +706,56 @@
  6340     xx%=x%-BSrect%(0) : yy%=y%-BSrect%(1)
  6350     BLOCK%(xx%+W%*yy%)=G%(x%+W%*y%, b%)
  6360   NEXT x% : NEXT y%
- 6370 BlockW%=BSrect%(3)-BSrect%(1)+1
- 6375 BlockH%=BSrect%(2)-BSrect%(0)+1
+ 6370 BlockW%=BSrect%(2)-BSrect%(0)+1
+ 6375 BlockH%=BSrect%(3)-BSrect%(1)+1
  6380 HaveBlock%=1 : BSstate%=0
  6390 ENDPROC
- 6400 DEF PROCpasteBlock(b%)
- 6405 LOCAL x%,y%,xx%,yy%
- 6410 IF HaveBlock%=0 THEN ENDPROC
- 6420 FOR y%=0 TO BlockW%-1
- 6430   FOR x%=0 TO BlockH%-1
- 6440     xx%=x%+PX% : yy%=y%+PY%
- 6450     IF xx%<W% AND yy%<H% THEN G%(xx%+yy%*H%, b%)=BLOCK%(x%+y%*H%)
- 6455     IF xx%<W% AND yy%<H% THEN PROCfilledRect(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, 6, 6, BLOCK%(x%+y%*H%))
- 6460   NEXT x% : NEXT y%
- 6470 PROCupdateBitmapFromGrid(b%)
+ 6400 DEF PROCcopyImage(b%)
+ 6405 LOCAL i%
+ 6420 FOR i%=0 TO W%*H%-1 : BLOCK%(i%)=G%(i%, b%) : NEXT i%
+ 6430 BlockW%=W% : BlockH%=H%
+ 6440 HaveBlock%=1 : BSstate%=0
  6490 ENDPROC
+ 6500 DEF PROCpasteBlock(b%)
+ 6502 PROCcopyToUndo(b%)
+ 6505 LOCAL x%,y%,xx%,yy%
+ 6510 IF HaveBlock%=0 THEN ENDPROC
+ 6520 FOR y%=0 TO BlockH%-1
+ 6530   FOR x%=0 TO BlockW%-1
+ 6540     xx%=x%+PX% : yy%=y%+PY%
+ 6550     IF xx%<W% AND yy%<H% THEN G%(xx%+W%*yy%, b%)=BLOCK%(x%+W%*y%)
+ 6555     IF xx%<W% AND yy%<H% THEN PROCfilledRect(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, 6, 6, BLOCK%(x%+y%*H%))
+ 6560   NEXT x% : NEXT y%
+ 6570 PROCupdateBitmapFromGrid(b%)
+ 6590 ENDPROC
+ 6600 DEF PROCmirrorSelected(x1%,y1%,x2%,y2%,b%)
+ 6601 REM flips selected area (or whole image) in main image left-right
+ 6605 LOCAL x%,y%,t%,bw%,ic%,io%
+ 6610 PROCcopyToUndo(b%)
+ 6615 bw%=x2%-x1%+1
+ 6620 FOR y%=y1% TO y2%
+ 6630   FOR x%=x1% TO x1%+(bw% DIV 2)-1
+ 6635     ic%=x%+W%*y% : REM current
+ 6640     io%=(x2%-x%+x1%)+W%*y% : REM opposite
+ 6650     t%=G%(ic%,b%) : G%(ic%,b%)=G%(io%,b%) : G%(io%,b%)=t% : REM SWAP
+ 6660   NEXT x% : NEXT y%
+ 6670 BSstate%=0
+ 6680 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+ 6690 ENDPROC
+ 6700 DEF PROCflipSelected(x1%,y1%,x2%,y2%,b%)
+ 6701 REM flips selected area (or whole image) in main image up-down
+ 6705 LOCAL x%,y%,t%,bw%,ic%,io%
+ 6710 PROCcopyToUndo(b%)
+ 6715 bh%=y2%-y1%+1
+ 6720 FOR x%=x1% TO x2%
+ 6730   FOR y%=y1% TO y1%+(bh% DIV 2)-1
+ 6735     ic%=x%+W%*y% : REM current
+ 6740     io%=x%+W%*(y2%-y%+y1%) : REM opposite
+ 6750     t%=G%(ic%,b%) : G%(ic%,b%)=G%(io%,b%) : G%(io%,b%)=t% : REM SWAP
+ 6760   NEXT y% : NEXT x%
+ 6770 BSstate%=0
+ 6780 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+ 6790 ENDPROC
  8000 REM ------- Colour lookup Functions ------------
  8005 :
  8010 DEF PROCloadLUT
