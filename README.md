@@ -27,3 +27,6 @@ v0.14 Add Init file "sped.ini"
 - Sprites can be looped or ping-ponged and delay changed
 
 v0.15 Adds Block Fill
+v0.16 adds block copy/paste/fill/clear
+
+![sped screenshot](SpriteEditor_v0.16.png "Sprite Editor screenshot v0.16")
