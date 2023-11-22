@@ -861,7 +861,6 @@
 7040 REPEAT 
 7050 ii%=FNnextItemFF
 7060 IF ii% > -1 THEN PROCdoFloodFill(ii%,bcol%,c%,b%)
-7065 PRINT TAB(30,15);SPC(4);TAB(30,15);STR$(FFlen%)
 7070 UNTIL FFlen%=0
 7080 PROCupdateBitmapFromGrid(b%) : REM PROCupdateScreenGrid(b%)
 7090 ENDPROC
