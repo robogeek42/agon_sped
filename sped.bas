@@ -1,9 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
-11 REM NOTE: Requires VDP version 2.0.0+ for the bitmap backed sprite function
-12 REM Thanks to discord user eightbitswide for the joystick code
-15 VERSION$="v0.17"
+15 VERSION$="v0.18"
 20 ON ERROR GOTO 10000
-25 DIM graphics 1024 : REM memory for file load 
+25 DIM graphics 768 : REM memory for file load 
 27 MB%=&40000 
 30 MODE 8
 35 ISEXIT=0 : SW%=320 : SH%=240 
@@ -11,7 +9,7 @@
 40 CONFIG_SIZE=1 : CONFIG_JOY=0 : CONFIG_TYPE=0
 42 CONFIG_JOYDELAY=20
 44 DIM FEXT$(3) : FEXT$(1)=".rgb" : FEXT$(2)=".rgba" : FEXT$(2)=".dat" 
-46 C1=21: C2=19: C3=15 : REM Help colours
+46 C1=21: C2=19: REM Help colours (C1=highlight)
 50 PROCconfig("sped.ini")
 52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
 55 REM --------------------------------
@@ -34,13 +32,12 @@
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
-135 NumBitmaps% = 7 : BM% = 0 : REM current bitmap
+135 NumBitmaps% = 6 : BM% = 0 : REM current bitmap
 140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
 148 LoopDir%=1
 
-150 REM Calc positions of sprite frame frames
 155 SPX%=150 : SPY%=18 : REM sprite x/y position on screen
 157 BBOXX%=150 : BBOXY%=42 : REM top-left of bitmap boxes
 160 DIM BMX%(NumBitmaps%), BMY%(NumBitmaps%)
@@ -49,6 +46,8 @@
 170 REM declare data for grid
 175 DIM G%(W%*H%, NumBitmaps%) 
 176 DIM U%(W%*H%) : REM for a simple, one level Undo
+177 FFlenMAX%=W%*H% : DIM FF%(W%*H%) : FFlen%=0 : REM stack for flood fill
+178 DIM R%(W%*H%) : REM rotation work area
 
 180 PROCdrawScreen
 182 COLOR 15 : PRINT TAB(12,FLINE%);"LOADING";
@@ -59,7 +58,6 @@
 200 NEXT B%
 
 210 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
-220 REM PROCupdateScreenGrid(BM%)
 
 230 COLOR 15 : PRINT TAB(12,FLINE%);"       ";
 
@@ -102,9 +100,9 @@
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
 490 IF key = ASC("e") OR key = ASC("E") THEN PROCexport
 495 REM M,N select bitmap
-500 IF key = ASC("m") OR key=ASC("M") THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
-510 IF key = ASC("n") OR key=ASC("N") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
-520 IF key = ASC("n") OR key=ASC("N") THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NumBitmaps% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+510 IF key = ASC(",") OR key=ASC("<") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NumBitmaps%-1
+520 IF key = ASC(",") OR key=ASC("<") THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
 530 IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
 535 REM Palette shortcut key, frames select and Loop/cycle type
 540 IF key >= ASC("1") AND key <= ASC("9") THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
@@ -119,7 +117,11 @@
 576 IF key = ASC("~") AND BSstate%=0 THEN PROCflipSelected(0,0,W%-1,H%-1,BM%)
 578 IF key = ASC("~") AND BSstate%>0 THEN PROCflipSelected(BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 580 IF key = ASC("u") OR key = ASC("U") THEN PROCdoUndo(BM%)
-585 IF HaveBlock%=1 THEN C. 15 : PRINT TAB(13,28);"*"; ELSE PRINT TAB(13,28);" ";
+582 IF key = ASC("/") THEN PROCfloodFill(PX%,PY%,COL%,BM%)
+584 IF key = ASC("]") AND BSstate%=0 THEN PROCrotateSelected(0,0,0,W%-1,H%-1,BM%)
+585 IF key = ASC("]") AND BSstate%>0 THEN PROCrotateSelected(0,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
+586 IF key = ASC("[") AND BSstate%=0 THEN PROCrotateSelected(1,0,0,W%-1,H%-1,BM%)
+587 IF key = ASC("[") AND BSstate%>0 THEN PROCrotateSelected(1,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 590 PROCshowFilename("")
 592 PROCprintSecondHelp(26)
 594 PROCgridCursor(1) : PROCblockCursor(1)
@@ -131,7 +133,7 @@
 
 695 END
 
-699 REM ------ Static Screen Update Functions ---------------
+699 REM ------ Static Screen Update Functions
 
 700 DEF PROCprintTitle
 705 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
@@ -161,35 +163,34 @@
 802 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
 804 PROCprintMainHelp(26)
 806 PROCprintSecondHelp(26)
-808 PROCprintBitmapHelp
+808 PROCprintBitmapHelp(19,10)
+809 COLOUR 54 : PRINT TAB(36,12);CHR$(240+LoopType%)
 810 PROCshortcutBox
-812 COLOUR 54 : PRINT TAB(36,12);CHR$(240) : REM direction arrow
 820 ENDPROC
 
 830 DEF PROCshort(x,y,pre$,hi$,post$)
-832 C1=21: C2=19: C3=15
 833 PRINT TAB(x,y);
 834 C. C2: PRINT pre$;
-836 REM C. C1: PRINT "[";: C. C3: PRINT hi$;: C. C1: PRINT "]";
 837 C. C1: PRINT hi$;
 838 C. C2: PRINT post$;
 840 ENDPROC
 
 850 DEF PROCprintMainHelp(v%)
-852 C. C1 : PRINT TAB(0,v%+0);"Cursor";: C. C2: PRINT TAB(6,v%+0);"Move";
-854 C. C1 : PRINT TAB(0,v%+1);"WASD";:   C. C2: PRINT TAB(6,v%+1);"Colour";
-856 C. C1 : PRINT TAB(0,v%+2);"Spc";:    C. C2: PRINT TAB(6,v%+2);"Set";
-858 C. C1 : PRINT TAB(0,v%+3);"Bksp";:   C. C2: PRINT TAB(6,v%+3);"Del";
-860 GCOL 0,15 : MOVE 13*8-4,26*8 : DRAW 13*8-4,31*8+2
+852 C. C1 : PRINT TAB(0,v%+0);:VDU 240,243,244,242: C. C2: PRINT TAB(5,v%+0);"Move";
+854 C. C1 : PRINT TAB(0,v%+1);"WASD";:   C. C2: PRINT TAB(5,v%+1);"Color";
+856 C. C1 : PRINT TAB(0,v%+2);"Spc";:    C. C2: PRINT TAB(5,v%+2);"Set";
+858 C. C1 : PRINT TAB(0,v%+3);"Bksp";:   C. C2: PRINT TAB(5,v%+3);"Del";
+860 GCOL 0,15 : MOVE 10*8+4,26*8 : DRAW 10*8+4,31*8+2
 865 ENDPROC
 
 880 DEF PROCprintSecondHelp(v%)
-882 PROCshort(14,v%,"","L","oad"): PROCshort(20,v%,"sa","V","e"): PROCshort(27,v%,"","E","xport"): PROCshort(35,v%,"e","X","it")
-884 PROCshort(14,v%+1,"","P","ick"): PROCshort(20,v%+1,"","C","lear"): PROCshort(27,v%+1,"","F","ill") : PROCshort(35,v%+1,"","U","ndo")
-888 PROCshort(14,v%+2,"","B","lock") 
-890 PROCshort(20,v%+2,"","-","copy")
-892 IF HaveBlock% THEN PROCshort(27,v%+2,"","=","paste") ELSE PRINT TAB(27,v%+2);SPC(8);
-894 PROCshort(20,v%+3,"","~","flip") : PROCshort(27,v%+3,"","#","mirror")
+882 PROCshort(11,v%,"","L","oad"): PROCshort(17,v%,"sa","V","e"): PROCshort(23,v%,"","E","xport"): PROCshort(30,v%,"","U","ndo"):  PROCshort(36,v%,"e","X","it")
+884 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(30,v%+1,"","/","flood")
+888 PROCshort(11,v%+2,"","B","lock") 
+890 PROCshort(17,v%+2,"","-","copy")
+892 IF HaveBlock% THEN PROCshort(23,v%+2,"","=","paste") ELSE C.8:PRINT TAB(23,v%+2);"=paste";
+894 PROCshort(23,v%+3,"","~","flip") : PROCshort(30,v%+3,"","#","mirror")
+896 PROCshort(11,v%+3,"","[]","rotate") 
 900 ENDPROC
 
 910 DEF PROCshortcutBox
@@ -198,12 +199,11 @@
 924 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
 930 ENDPROC
 
-940 DEF PROCprintBitmapHelp
-945 COLOUR 21 : PRINT TAB(19,10);"N M";   :COLOUR 19:PRINT TAB(23,10);"Select bitmap";
-950 COLOUR 21 : PRINT TAB(19,11);"R";     :COLOUR 19:PRINT TAB(23,11);"Num frames";
-955 COLOUR 21 : PRINT TAB(19,12);"O";     :COLOUR 19:PRINT TAB(23,12);"Loop type";
-960 COLOUR 54 : PRINT TAB(36,12);CHR$(240)
-965 COLOUR 21 : PRINT TAB(19,13);"I";     :COLOUR 19:PRINT TAB(23,13);"Loop speed";
+940 DEF PROCprintBitmapHelp(x%,y%)
+945 PROCshort(x%,y%  ,"","<>"," Select bitmap")
+950 PROCshort(x%,y%+1,""," R"," Num frames")
+955 PROCshort(x%,y%+2,""," O"," Loop type") 
+960 PROCshort(x%,y%+3,""," I"," Loop speed")
 970 ENDPROC
 
 1000 DEF PROCdrawGrid(w%,h%,x%,y%)
@@ -220,7 +220,6 @@
 1090 ENDPROC
 
 1100 DEF PROCdrawBitmapBoxes
-1105 REM bitmap boxes, highlight selected
 1110 FOR S%=0 TO NumBitmaps%-1
 1120 IF S% = BM% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
 1130 PROCrect(BMX%(S%)-2, BMY%(S%)-2, W%+3, H%+3, gc%)
@@ -290,11 +289,7 @@
 1585 COLOUR 15
 1590 ENDPROC
 
-1599 REM ------ Grid/Bitmap Update Functions -----------------
-1600 :
-1602 REM SCREEN Grid      DATA Grid       Bitmap      Sprite 
-1604 REM   SetCol    -->    update   -->  update -->  refresh
-1605 REM   update    <--  Load/Clear -->  update -->  refresh
+1599 REM ------ Grid/Bitmap Update Functions
 
 1650 DEF PROCsetCol(x%,y%,c%)
 1655 REM set colour in screen grid AND Data Grid G%
@@ -329,10 +324,8 @@
 
 1900 DEF PROCupdateBitmapFromGrid(bmap%)
 1905 REM update bitmap from its data drid
-1906 REM TODO speed up - use memory and precomputed lookup?
 1910 LOCAL clu%
 1920 VDU 23,27,0,bmap%   : REM Select bitmap n
-1924 REM Use Adjust Buffer API
 1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;W%*H%*4;
 1930 FOR I%=0 TO W%*H%-1
 1935 clu%=CL%(G%(I%, bmap%))     : REM lookup RGB index
@@ -352,23 +345,23 @@
 2060 PROCupdateSpriteBitmap(bmap%)
 2090 ENDPROC
 
-2099 REM ------ Sprite Functions -----------------------------
+2099 REM ------ Sprite Functions
 
 2100 DEF PROCcreateSprite(w%,h%)
 2102 REM setup the sprite and bitmap. Clear both grids
 2105 LOCAL B%
 2110 FOR B%=0 TO NumBitmaps%-1
-2115 VDU 23,27,0,B%       : REM Select bitmap bmnum%
-2120 VDU 23,27,2,w%;h%;0;0; : REM create empty (black) bitmap
+2115 VDU 23,27,0,B%       : REM Select bitmap
+2120 VDU 23,27,2,w%;h%;0;0; : REM create empty bitmap
 2125 NEXT B%
 2130 VDU 23,27,4,0        : REM Select sprite 0
-2135 VDU 23,27,5          : REM Clear frames for current sprite
+2135 VDU 23,27,5          : REM Clear frames
 2140 FOR B%=0 TO NumBitmaps%-1
 2145 VDU 23,27,6,B%       : REM Add bitmap n as a frame of sprite
 2150 NEXT B%
-2160 VDU 23,27,11         : REM Show the sprite
-2165 VDU 23,27,7,1        : REM activate 1 sprite
-2170 VDU 23,27,13,SPX%; SPY%; : REM display sprite
+2160 VDU 23,27,11         : REM Show
+2165 VDU 23,27,7,1        : REM activate
+2170 VDU 23,27,13,SPX%; SPY%; : REM display
 2190 ENDPROC
 
 2200 DEF PROCupdateSpriteBitmap(bmap%)
@@ -391,8 +384,6 @@
 
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
-2307 REM update frame number every SpriteDelay% screen refreshes
-2308 REM loop type : 0=left to right loop, 1=ping-pong
 2310 Ctr% = Ctr% - 1
 2320 IF Ctr%=0 THEN SF%=SF%+LoopDir% 
 2322 IF Ctr%=0 AND LoopType%=0 AND SF%=NSF% THEN SF%=0
@@ -416,7 +407,7 @@
 2540 PROCdrawBitmapBoxes
 2550 ENDPROC
 
-2599 REM ------ undo -----------------------------------------
+2599 REM ------ undo
 
 2600 DEF PROCcopyToUndo(b%)
 2610 LOCAL i%
@@ -432,7 +423,7 @@
 2790 ENDPROC
 
 
-2999 REM ------ File Handling --------------------------------
+2999 REM ------ File Handling
 
 3000 DEF PROCshowFilename(fn$)
 3005 REM just display filename in status bar
@@ -442,9 +433,7 @@
 3090 ENDPROC
 
 3100 DEF PROCloadSaveFile(SV%)
-3105 REM ask for a filename and load/save the data in RGB raw format with no headers
-3106 REM ask if they want to load/save multiple frames
-3110 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
+3110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
 3120 IF fmt%<1 OR fmt%>3 THEN ENDPROC
 3130 yn$ = FNinputStr("Multiple Frames (y/N)")
 3140 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
@@ -602,7 +591,7 @@
 
 4100 DEF PROCexport
 4105 LOCAL frames% : frames%=1
-4110 fmt% = FNinputInt("Format 1)RGB888 2)RGBA8888 3)RGBA2222")
+4110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
 4115 IF fmt%<1 OR fmt%>3 THEN ENDPROC
 4120 yn$ = FNinputStr("Multiple Frames (y/N)")
 4125 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
@@ -627,16 +616,12 @@
 4220 PRINT#FH%,S$ : BPUT#FH%,10
 4230 ENDPROC
 
-5000 REM ------- Generic Functions ------------
+5000 REM ------- Generic Functions
 
 5010 DEF PROCfilledRect(x%,y%,w%,h%,c%)
-5005 REM PROCfilledRect draw a filled rectangle
-5011 REM assume screen scaling OFF
-5012 REM update for basic 3.00, use 85 to plot a triangle, or 101 to plot a filled rect
+5005 REM PROCfilledRect draw a filled rectangle. assume screen scaling OFF
 5020 GCOL 0,c%
 5030 MOVE x%,y% 
-5040 REM MOVE x%+w%,y% : PLOT 85, x%+w%, y%+h%
-5050 REM MOVE x%, y%+h% : PLOT 85, x%, y%
 5055 PLOT 101, x%+w%, y%+h%
 5060 ENDPROC
 
@@ -674,8 +659,8 @@
 5342 LOCAL in_str$, in_int%, l%
 5344 PROCprintTitle : l%=4
 5346 l%=FNprintConfig(l%) : l%=l%+1
-5350 PRINT TAB(0,l%); :C. 15: PRINT "C"; : C. 21: PRINT" to configure, ";
-5355 C. 15:PRINT "RETURN";:C. 21:PRINT" to continue.";:C. 15: INPUT in_str$
+5350 PRINT TAB(0,l%); :C. 15: PRINT "C"; : C. C1: PRINT" to configure, ";
+5355 C. 15:PRINT "RETURN";:C. C1:PRINT" to continue.";:C. 15: INPUT in_str$
 5360 IF in_str$<>"c" AND in_str$<>"C" THEN =1
 5365 l%=l%+2 : in_int%=FNinputOpts2(l%,"Sprite Size",1,"16x16","8x8") 
 5370 IF in_int%=2 THEN CONFIG_SIZE=2 ELSE CONFIG_SIZE=1
@@ -686,14 +671,14 @@
 5395 =0
 
 5400 DEF FNprintConfig(line%)
-5410 C. 21: PRINT TAB(0,line%);"Sprite Size  : "; : C. 19
+5410 C. C1: PRINT TAB(0,line%);"Sprite Size  : "; : C. C2
 5420 IF CONFIG_SIZE=2 THEN PRINT "8x8" ELSE PRINT "16x16"
 5425 line%=line%+1
-5430 C. 21: PRINT TAB(0,line%);"Joystick     : "; : C. 19
+5430 C. C1: PRINT TAB(0,line%);"Joystick     : "; : C. C2
 5440 IF CONFIG_JOY=1 THEN PRINT "Enabled" ELSE PRINT "Disabled"
 5445 line%=line%+1
-5450 IF CONFIG_JOY=1 THEN C. 21 : PRINT "Joy Delay    : ";:C. 19 : PRINT ;CONFIG_JOYDELAY;: line%=line%+1
-5460 C. 21: PRINT TAB(0,line%);"Editing type : "; : C. 19
+5450 IF CONFIG_JOY=1 THEN C. C1 : PRINT "Joy Delay    : ";:C. C2 : PRINT ;CONFIG_JOYDELAY;: line%=line%+1
+5460 C. C1: PRINT TAB(0,line%);"Editing type : "; : C. C2
 5470 IF CONFIG_TYPE=2 THEN PRINT "Sprite Sheet" ELSE PRINT "Bitmaps"
 5480 line%=line%+1
 5490 =line%
@@ -722,13 +707,15 @@
 5640 IF var$="FEXT1" THEN FEXT$(1)=val$
 5642 IF var$="FEXT2" THEN FEXT$(3)=val$
 5644 IF var$="FEXT3" THEN FEXT$(3)=val$
+5646 IF var$="C1" THEN C1=VAL(val$)
+5648 IF var$="C2" THEN C2=VAL(val$)
 5690 ENDPROC
 
 5700 DEF FNinputOpts2(line%,base$,hili%,opt1$,opt2$)
-5710 C. 21: PRINT TAB(0,line%);base$;" ";
+5710 C. C1: PRINT TAB(0,line%);base$;" ";
 5720 IF hili%=1 THEN COLOUR 15
 5725 PRINT "1) ";opt1$;" ";
-5727 C. 21
+5727 C. C1
 5730 IF hili%=2 THEN COLOUR 15
 5735 PRINT "2) ";opt2$;" ";
 5780 COLOUR 15 : INPUT in%
@@ -736,10 +723,13 @@
 
 5800 DEF PROCsetupChars
 5810 VDU 23,240,0,&20,&40,&FF,&40,&20,0,0 : REM left arrow
-5820 VDU 23,241,0,&24,&42,&FF,&42,&24,0,0 : REM bidirectional
-5840 ENDPROC
+5812 VDU 23,241,0,&24,&42,&FF,&42,&24,0,0 : REM bidirectional
+5814 VDU 23,242,0,&04,&02,&FF,&02,&04,0,0 : REM right 
+5816 VDU 23,243,&10,&38,&54,&10,&10,&10,&10,0 : REM up 
+5818 VDU 23,244,&10,&10,&10,&10,&54,&38,&10,0 : REM down 
+5830 ENDPROC
 
-5899 REM -------  block fill -----------------------
+5899 REM -------  block functions 
 5900 DEF PROCmarkBlock
 5910 IF BSstate%=0 THEN BSstate%=1 : HaveBlock%=0
 5920 IF BSstate%=1 THEN BSrect%(0)=PX% : BSrect%(1)=PY% : BSrect%(2)=PX% : BSrect%(3)=PY%
@@ -812,7 +802,7 @@
 6590 ENDPROC
 
 6600 DEF PROCmirrorSelected(x1%,y1%,x2%,y2%,b%)
-6601 REM flips selected area (or whole image) in main image left-right
+6601 REM flips left-right
 6605 LOCAL x%,y%,t%,bw%,ic%,io%
 6610 PROCcopyToUndo(b%)
 6615 bw%=x2%-x1%+1
@@ -822,12 +812,12 @@
 6640 io%=(x2%-x%+x1%)+W%*y% : REM opposite
 6650 t%=G%(ic%,b%) : G%(ic%,b%)=G%(io%,b%) : G%(io%,b%)=t% : REM SWAP
 6660 NEXT x% : NEXT y%
-6670 BSstate%=0
+6670 REM BSstate%=0
 6680 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
 6690 ENDPROC
 
 6700 DEF PROCflipSelected(x1%,y1%,x2%,y2%,b%)
-6701 REM flips selected area (or whole image) in main image up-down
+6701 REM flips up-down
 6705 LOCAL x%,y%,t%,bw%,ic%,io%
 6710 PROCcopyToUndo(b%)
 6715 bh%=y2%-y1%+1
@@ -837,9 +827,69 @@
 6740 io%=x%+W%*(y2%-y%+y1%) : REM opposite
 6750 t%=G%(ic%,b%) : G%(ic%,b%)=G%(io%,b%) : G%(io%,b%)=t% : REM SWAP
 6760 NEXT y% : NEXT x%
-6770 BSstate%=0
+6770 REM BSstate%=0
 6780 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
 6790 ENDPROC
+
+6800 DEF PROCrotateSelected(d%,x1%,y1%,x2%,y2%,b%)
+6801 REM rotate
+6805 LOCAL x%,y%,bw%,bh%,i%, ic%,ir%
+6810 PROCcopyToUndo(b%)
+6812 FOR i%=0 TO W%*H%-1 : R%(i%)=G%(i%, b%) : NEXT i%
+6815 bw%=x2%-x1%+1 : bh%=y2%-y1%+1
+6820 IF bw% <> bh% THEN C.1:PRINT TAB(30,FLINE%);"not square"; : ENDPROC
+6825 FOR y%=y1% TO y2%
+6830 FOR x%=x1% TO x2%
+6835 ic%=x%+y%*W%
+6840 IF d%=0 THEN ir%=(x2%-(y%-y1%)) + (y1%+(x%-x1%))*W%: REM ccw
+6845 IF d%=1 THEN ir%=(x1%+(y%-y1%)) + (y2%-(x%-x1%))*W%: REM cw
+6850 R%(ir%)=G%(ic%, b%)
+6855 NEXT x% : NEXT y%
+6860 FOR i%=0 TO W%*H%-1 : G%(i%, b%)=R%(i%) : NEXT i%
+6870 REM BSstate%=0
+6880 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+6890 ENDPROC
+
+6999 REM -------  Flood fill 
+
+7000 DEF PROCfloodFill(x%,y%,c%,b%)
+7005 LOCAL i%, ii%, bcal%
+7010 PROCcopyToUndo(b%)
+7015 i%=x%+W%*y%
+7020 bcol%=G%(i%,b%) : REM background colour to fill
+7030 FFlen%=1 : FF%(FFlen%-1)=i%
+7040 REPEAT 
+7050 ii%=FNnextItemFF
+7060 IF ii% > -1 THEN PROCdoFloodFill(ii%,bcol%,c%,b%)
+7065 PRINT TAB(30,15);SPC(4);TAB(30,15);STR$(FFlen%)
+7070 UNTIL FFlen%=0
+7080 PROCupdateBitmapFromGrid(b%) : REM PROCupdateScreenGrid(b%)
+7090 ENDPROC
+
+7100 DEF FNnextItemFF
+7110 IF FFlen%=0 THEN =-1
+7120 FFlen%=FFlen%-1 
+7130 =FF%(FFlen%)
+
+7140 DEF FNaddItemFF(item%)
+7150 IF FFlen%=FFlenMAX% THEN =-1
+7160 FF%(FFlen%)=item% : FFlen%=FFlen%+1 
+7170 =FFlen%
+
+7200 DEF PROCdoFloodFill(i%,bcol%,c%,b%)
+7202 LOCAL xx%,yy%,ret%
+7204 xx%=i% MOD W% : yy%=i% DIV W%
+7210 G%(i%,b%)=c% : PROCfilledRect(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, 6, 6, c%)
+7220 IF xx%>0 THEN IF G%(i%-1,b%)=bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
+7225 IF ret%=-1 THEN STOP
+7230 IF xx%<(W%-1) THEN IF G%(i%+1,b%)=bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
+7235 IF ret%=-1 THEN STOP
+7240 IF yy%>0 THEN IF G%(i%-W%,b%)=bcol% THEN ret%=FNaddItemFF(i%-W%) : REM up
+7245 IF ret%=-1 THEN STOP
+7250 IF yy%<(H%-1) THEN IF G%(i%+W%,b%)=bcol% THEN ret%=FNaddItemFF(i%+W%) : REM down
+7255 IF ret%=-1 THEN STOP
+7290 ENDPROC
+
 
 8000 REM ------- Colour lookup Functions ------------
 8005 :

@@ -26,7 +26,10 @@ v0.14 Add Init file "sped.ini"
 - Allow Joystick mode to be configured off
 - Sprites can be looped or ping-ponged and delay changed
 
-v0.15 Adds Block Fill
+v0.15 adds Block Fill
 v0.16 adds block copy/paste/fill/clear
+
+v0.17 adds flip/mirror, undo
+v0.18 adds flood-fill
 
 ![sped screenshot](SpriteEditor_v0.16.png "Sprite Editor screenshot v0.16")
