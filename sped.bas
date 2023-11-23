@@ -18,7 +18,7 @@
 60 GRIDCOL%=8 : CURSCOL%=15
 65 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
 70 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
-75 DIM BSTAB%(3,3) : PROCloadBitshiftTable
+75 DIM BSTAB%(3,3), TTE%(4) : PROCloadBitshiftTable
 
 80 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
 82 COL%=1 : REM selected palette colour
@@ -282,11 +282,11 @@
 1540 COLOUR 15: PRINT TAB(x%,y%);"COL ";COL%;
 1565 REM hex
 1570 COLOUR 9 : PRINT TAB(x%+7,y%);"00";
-1572 COLOUR 9 : PRINT TAB(x%+7,y%);~RGB%(clu%*3);
+1572 COLOUR 9 : PRINT TAB(x%+7,y%);~FNindTOrgb(clu%,0);
 1575 COLOUR 10: PRINT TAB(x%+9,y%);"00";
-1577 COLOUR 10: PRINT TAB(x%+9,y%);~RGB%(1+clu%*3);
+1577 COLOUR 10: PRINT TAB(x%+9,y%);~FNindTOrgb(clu%,1);
 1580 COLOUR 12: PRINT TAB(x%+11,y%);"00";
-1582 COLOUR 12: PRINT TAB(x%+11,y%);~RGB%(2+clu%*3);
+1582 COLOUR 12: PRINT TAB(x%+11,y%);~FNindTOrgb(clu%,2);
 1585 COLOUR 15
 1590 ENDPROC
 
@@ -909,6 +909,15 @@
 8080 NEXT
 8090 ENDPROC
 
+8100 DEF FNbbcTOrgb(bbccol%,comp%) : REM convert a bbccol to RGB component-wise
+8110 =FNindTOrgb(CL%(bbccol%))
+
+8120 DEF FNindTOrgb(ind%,comp%) : REM convert rgb index to RGB comp. 0=R,1=G,2=B
+8130 IF comp%=0 THEN tb%=(ind% AND &30) DIV 16
+8135 IF comp%=1 THEN tb%=(ind% AND &0C) DIV 4 
+8140 IF comp%=2 THEN tb%=ind% AND &03
+8150 =TTE%(tb%)
+
 8200 REM Colour mapping to RGB 
 8210 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
 8220 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
@@ -936,19 +945,21 @@
 8450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
 8460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
 
-8500 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
-8510 DEF PROCloadBitshiftTable
-8515 LOCAL col%,comp%
-8520 RESTORE 8610
-8530 FOR comp%=0 TO 3
-8540 FOR col%=0 TO 3
-8550 READ BSTAB%(col%,comp%) 
-8560 NEXT col%
+8500 DEF PROCloadBitshiftTable
+8501 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
+8505 LOCAL col%,comp%
+8510 RESTORE 8610
+8520 FOR comp%=0 TO 3 : FOR col%=0 TO 3
+8530 READ BSTAB%(col%,comp%) 
+8540 NEXT col% : NEXT comp%
+8550 FOR comp%=0 TO 3
+8560 READ TTE%(comp%)
 8570 NEXT comp%
 8595 ENDPROC
 
 8600 REM bitshift lookup 
 8610 DATA 0,1,2,3, 0,4,8,&0C, 0,&10,&20,&30, 0,&40,&80,&C0
+8620 DATA 0,&55,&AA,&FF
 
 10000 REM  ------------ Error Handling -------------
 10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
