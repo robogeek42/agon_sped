@@ -2,7 +2,8 @@
 15 VERSION$="v0.18"
 20 ON ERROR GOTO 10000
 25 DIM graphics 768 : REM memory for file load 
-27 MB%=&40000 
+26 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
+27 IF ADL=1 THEN MB%=0 ELSE MB%=&40000
 30 MODE 8
 35 ISEXIT=0 : SW%=320 : SH%=240 
 37 REM ----- config in sped.ini -----
