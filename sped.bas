@@ -17,7 +17,7 @@
 57 GRIDX%=8 : GRIDY%=16 : REM Grid position
 60 GRIDCOL%=8 : CURSCOL%=15
 65 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
-70 DIM CL%(64) : DIM RGB%(64*3) : DIM REVLU%(64) : PROCloadLUT
+70 DIM CL%(64) : DIM REVLU%(64) : PROCloadLUT
 75 DIM BSTAB%(3,3), TTE%(4) : PROCloadBitshiftTable
 
 80 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
@@ -330,7 +330,7 @@
 1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;W%*H%*4;
 1930 FOR I%=0 TO W%*H%-1
 1935 clu%=CL%(G%(I%, bmap%))     : REM lookup RGB index
-1940 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
+1940 VDU FNindTOrgb(clu%,0), FNindTOrgb(clu%,1), FNindTOrgb(clu%,2), 255
 1945 NEXT
 1950 PROCupdateSpriteBitmap(bmap%)
 1990 ENDPROC
@@ -342,7 +342,7 @@
 2025 REM Use Adjust Buffer API
 2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*W%)*4;4;
 2040 clu%=CL%(c%)     : REM lookup RGB index
-2050 VDU RGB%(clu%*3), RGB%(clu%*3+1), RGB%(clu%*3+2), 255
+2050 VDU FNindTOrgb(clu%,0), FNindTOrgb(clu%,1), FNindTOrgb(clu%,2), 255
 2060 PROCupdateSpriteBitmap(bmap%)
 2090 ENDPROC
 
@@ -521,9 +521,9 @@
 3715 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3720 FOR I%=0 TO (W%*H%)-1
 3730 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-3740 BPUT#h%, RGB%(RGBIndex%*3)
-3742 BPUT#h%, RGB%(RGBIndex%*3+1)
-3744 BPUT#h%, RGB%(RGBIndex%*3+2)
+3740 BPUT#h%, FNindTOrgb(RGBIndex%,0)
+3742 BPUT#h%, FNindTOrgb(RGBIndex%,1)
+3744 BPUT#h%, FNindTOrgb(RGBIndex%,2)
 3746 IF alpha%=1 THEN  BPUT#h%, &FF
 3750 NEXT
 3760 CLOSE#h%
@@ -536,10 +536,7 @@
 3815 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3820 FOR I%=0 TO (W%*H%)-1
 3830 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-3832 DATR% =  RGB%(RGBIndex%*3) AND &03
-3834 DATG% =  RGB%(RGBIndex%*3+1) AND &03
-3836 DATB% =  RGB%(RGBIndex%*3+2) AND &03
-3840 out% = &C0 OR DATB%*16 OR DATG%*4 OR DATR%
+3840 out% = &C0 OR RGBIndex%
 3845 BPUT#h%, out%
 3850 NEXT
 3860 CLOSE#h%
@@ -558,7 +555,7 @@
 3940 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 3945 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 3950 FOR J%=0 TO 2
-3955 IF RGB%(RGBIndex%*3+J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(RGB%(RGBIndex%*3+J%))
+3955 IF FNindTOrgb(RGBIndex%,J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(FNindTOrgb(RGBIndex%,J%))
 3960 IF J%<2 THEN SS$=SS$+","
 3964 NEXT J%
 3966 IF alpha%=1 THEN SS$=SS$+",&FF"
@@ -581,13 +578,9 @@
 4035 FOR I%=0 TO (W%*H%)-1
 4040 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 4045 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
-4047 PIX%=0
-4050 FOR J%=0 TO 3
-4055 col%=RGB%(RGBIndex%*3+J%) AND 3 : REM convert colour 8bit to 2 bit
-4060 PIX%=PIX% OR BSTAB%(col%,J%) : REM bitshift colour and add to final value
-4066 NEXT J%
-4067 IF RGBIndex%>0 THEN PIX%=PIX% OR &C0 : REM alpha=1
-4068 IF PIX%=0 THEN SS$=SS$+"0" ELSE SS$=SS$+"&"+STR$~(PIX%)
+4050 PIX%=0
+4060 IF RGBIndex%>0 THEN PIX%=PIX% OR &C0 : REM alpha=1
+4065 IF PIX%=0 THEN SS$=SS$+"0" ELSE SS$=SS$+"&"+STR$~(PIX%)
 4070 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
 4075 NEXT I%
 4080 PROCprintFileLine(h%, SS$)
@@ -909,7 +902,7 @@
 8040 READ CL%(I%)
 8050 NEXT
 8060 FOR I%=0 TO 63
-8070 READ RGB%(I%*3),RGB%(I%*3+1),RGB%(I%*3+2),REVLU%(I%)
+8070 READ REVLU%(I%)
 8080 NEXT
 8090 ENDPROC
 
@@ -932,22 +925,22 @@
 8270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
 8280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
 8300 REM - RGB colours with a reverse map
-8310 DATA &00, &00, &00,  0, &00, &00, &55, 16, &00, &00, &AA,  4, &00, &00, &FF, 12
-8320 DATA &00, &55, &00, 17, &00, &55, &55, 18, &00, &55, &AA, 19, &00, &55, &FF, 20
-8330 DATA &00, &AA, &00,  2, &00, &AA, &55, 21, &00, &AA, &AA,  6, &00, &AA, &FF, 22
-8340 DATA &00, &FF, &00, 10, &00, &FF, &55, 23, &00, &FF, &AA, 24, &00, &FF, &FF, 14
-8350 DATA &55, &00, &00, 25, &55, &00, &55, 26, &55, &00, &AA, 27, &55, &00, &FF, 28
-8360 DATA &55, &55, &00, 29, &55, &55, &55,  8, &55, &55, &AA, 30, &55, &55, &FF, 31
-8370 DATA &55, &AA, &00, 32, &55, &AA, &55, 33, &55, &AA, &AA, 34, &55, &AA, &FF, 35
-8380 DATA &55, &FF, &00, 36, &55, &FF, &55, 37, &55, &FF, &AA, 38, &55, &FF, &FF, 39
-8390 DATA &AA, &00, &00,  1, &AA, &00, &55, 40, &AA, &00, &AA,  5, &AA, &00, &FF, 41
-8400 DATA &AA, &55, &00, 42, &AA, &55, &55, 43, &AA, &55, &AA, 44, &AA, &55, &FF, 45
-8410 DATA &AA, &AA, &00,  3, &AA, &AA, &55, 46, &AA, &AA, &AA,  7, &AA, &AA, &FF, 47
-8420 DATA &AA, &FF, &00, 48, &AA, &FF, &55, 49, &AA, &FF, &AA, 50, &AA, &FF, &FF, 51
-8430 DATA &FF, &00, &00,  9, &FF, &00, &55, 52, &FF, &00, &AA, 53, &FF, &00, &FF, 13
-8440 DATA &FF, &55, &00, 54, &FF, &55, &55, 55, &FF, &55, &AA, 56, &FF, &55, &FF, 57
-8450 DATA &FF, &AA, &00, 58, &FF, &AA, &55, 59, &FF, &AA, &AA, 60, &FF, &AA, &FF, 61
-8460 DATA &FF, &FF, &00, 11, &FF, &FF, &55, 62, &FF, &FF, &AA, 63, &FF, &FF, &FF, 15
+8310 DATA  0, 16,  4, 12
+8320 DATA 17, 18, 19, 20
+8330 DATA  2, 21,  6, 22
+8340 DATA 10, 23, 24, 14
+8350 DATA 25, 26, 27, 28
+8360 DATA 29,  8, 30, 31
+8370 DATA 32, 33, 34, 35
+8380 DATA 36, 37, 38, 39
+8390 DATA  1, 40,  5, 41
+8400 DATA 42, 43, 44, 45
+8410 DATA  3, 46,  7, 47
+8420 DATA 48, 49, 50, 51
+8430 DATA  9, 52, 53, 13
+8440 DATA 54, 55, 56, 57
+8450 DATA 58, 59, 60, 61
+8460 DATA 11, 62, 63, 15
 
 8500 DEF PROCloadBitshiftTable
 8501 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
