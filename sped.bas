@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 15 VERSION$="v0.18"
 20 ON ERROR GOTO 10000
-25 DIM graphics 768 : REM memory for file load 
+25 DIM graphics 1024 : REM memory for file load 
 26 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
 27 IF ADL=1 THEN MB%=0 ELSE MB%=&40000
 30 MODE 8
@@ -33,7 +33,7 @@
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
-135 NumBitmaps% = 6 : BM% = 0 : REM current bitmap
+135 NumBitmaps% = 4 : BM% = 0 : REM current bitmap
 140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
