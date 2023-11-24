@@ -33,7 +33,7 @@
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
-135 NumBitmaps% = 4 : BM% = 0 : REM current bitmap
+135 NumBitmaps% = 7 : BM% = 0 : REM current bitmap
 140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
@@ -925,22 +925,10 @@
 8270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
 8280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
 8300 REM - RGB colours with a reverse map
-8310 DATA  0, 16,  4, 12
-8320 DATA 17, 18, 19, 20
-8330 DATA  2, 21,  6, 22
-8340 DATA 10, 23, 24, 14
-8350 DATA 25, 26, 27, 28
-8360 DATA 29,  8, 30, 31
-8370 DATA 32, 33, 34, 35
-8380 DATA 36, 37, 38, 39
-8390 DATA  1, 40,  5, 41
-8400 DATA 42, 43, 44, 45
-8410 DATA  3, 46,  7, 47
-8420 DATA 48, 49, 50, 51
-8430 DATA  9, 52, 53, 13
-8440 DATA 54, 55, 56, 57
-8450 DATA 58, 59, 60, 61
-8460 DATA 11, 62, 63, 15
+8310 DATA  0, 16,  4, 12, 17, 18, 19, 20,  2, 21,  6, 22, 10, 23, 24, 14
+8320 DATA 25, 26, 27, 28, 29,  8, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39
+8330 DATA  1, 40,  5, 41, 42, 43, 44, 45,  3, 46,  7, 47, 48, 49, 50, 51
+8340 DATA  9, 52, 53, 13, 54, 55, 56, 57, 58, 59, 60, 61, 11, 62, 63, 15
 
 8500 DEF PROCloadBitshiftTable
 8501 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
@@ -949,6 +937,7 @@
 8520 FOR comp%=0 TO 3 : FOR col%=0 TO 3
 8530 READ BSTAB%(col%,comp%) 
 8540 NEXT col% : NEXT comp%
+8545 REM Two-bit TO Eight-bit convert
 8550 FOR comp%=0 TO 3
 8560 READ TTE%(comp%)
 8570 NEXT comp%
