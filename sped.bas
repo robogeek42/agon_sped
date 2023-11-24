@@ -518,6 +518,7 @@
 3701 REM save raw data to a file. RGB or RGBA 8bit format with no header.
 3705 LOCAL I%, RGBIndex%, h%
 3710 h% = OPENOUT(f$)
+3715 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3720 FOR I%=0 TO (W%*H%)-1
 3730 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 3740 BPUT#h%, RGB%(RGBIndex%*3)
@@ -532,6 +533,7 @@
 3801 REM save raw data to a file. RGBA2222 format with no header.
 3805 LOCAL I%, RGBIndex%, h%
 3810 h% = OPENOUT(f$)
+3815 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3820 FOR I%=0 TO (W%*H%)-1
 3830 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 3832 DATR% =  RGB%(RGBIndex%*3) AND &03
@@ -551,6 +553,7 @@
 3922 SS$=SS$+" bitmap num "+STR$(b%+1)
 3925 ln%=ln%+10
 3930 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
+3932 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3935 FOR I%=0 TO (W%*H%)-1
 3940 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 3945 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
@@ -574,6 +577,7 @@
 4022 SS$=SS$+" bitmap num "+STR$(b%+1)
 4025 ln%=ln%+10
 4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
+4032 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 4035 FOR I%=0 TO (W%*H%)-1
 4040 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 4045 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
