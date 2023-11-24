@@ -1,7 +1,7 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
 15 VERSION$="v0.18"
 20 ON ERROR GOTO 10000
-25 DIM graphics 768 : REM memory for file load 
+25 DIM graphics 1024 : REM memory for file load 
 26 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
 27 IF ADL=1 THEN MB%=0 ELSE MB%=&40000
 30 MODE 8
@@ -33,7 +33,7 @@
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
-135 NumBitmaps% = 6 : BM% = 0 : REM current bitmap
+135 NumBitmaps% = 4 : BM% = 0 : REM current bitmap
 140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
@@ -518,6 +518,7 @@
 3701 REM save raw data to a file. RGB or RGBA 8bit format with no header.
 3705 LOCAL I%, RGBIndex%, h%
 3710 h% = OPENOUT(f$)
+3715 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3720 FOR I%=0 TO (W%*H%)-1
 3730 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 3740 BPUT#h%, RGB%(RGBIndex%*3)
@@ -532,6 +533,7 @@
 3801 REM save raw data to a file. RGBA2222 format with no header.
 3805 LOCAL I%, RGBIndex%, h%
 3810 h% = OPENOUT(f$)
+3815 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3820 FOR I%=0 TO (W%*H%)-1
 3830 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
 3832 DATR% =  RGB%(RGBIndex%*3) AND &03
@@ -551,6 +553,7 @@
 3922 SS$=SS$+" bitmap num "+STR$(b%+1)
 3925 ln%=ln%+10
 3930 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
+3932 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3935 FOR I%=0 TO (W%*H%)-1
 3940 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 3945 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
@@ -574,6 +577,7 @@
 4022 SS$=SS$+" bitmap num "+STR$(b%+1)
 4025 ln%=ln%+10
 4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
+4032 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 4035 FOR I%=0 TO (W%*H%)-1
 4040 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 4045 RGBIndex% = CL%(G%(I%, b%)) : REM lookup the RGB colour index for this colour 
