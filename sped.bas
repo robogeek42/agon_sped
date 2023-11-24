@@ -58,7 +58,7 @@
 195 FOR I%=0 TO W%*H%-1 : G%(I%, B%)=0 : U%(I%)=0 : NEXT I%
 200 NEXT B%
 
-210 FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
+210 REM FOR B%=0 TO NumBitmaps%-1 : PROCupdateBitmapFromGrid(B%) : NEXT
 
 230 COLOR 15 : PRINT TAB(12,FLINE%);"       ";
 
@@ -646,40 +646,8 @@
 5300 DEF PROCconfig(conf_file$)
 5305 VDU 23,0,192,0,23,1,0 
 5310 PROCreadConfigFile(conf_file$)
-5320 REPEAT
-5322 ret%=FNdoconfig(conf_file$)
-5324 CLS
-5326 UNTIL ret%=1
 5330 IF CONFIG_SIZE=2 THEN W%=8:H%=8 ELSE W%=16:H%=16
 5335 ENDPROC
-
-5340 DEF FNdoconfig(conf_file$)
-5342 LOCAL in_str$, in_int%, l%
-5344 PROCprintTitle : l%=4
-5346 l%=FNprintConfig(l%) : l%=l%+1
-5350 PRINT TAB(0,l%); :C. 15: PRINT "C"; : C. C1: PRINT" to configure, ";
-5355 C. 15:PRINT "RETURN";:C. C1:PRINT" to continue.";:C. 15: INPUT in_str$
-5360 IF in_str$<>"c" AND in_str$<>"C" THEN =1
-5365 l%=l%+2 : in_int%=FNinputOpts2(l%,"Sprite Size",1,"16x16","8x8") 
-5370 IF in_int%=2 THEN CONFIG_SIZE=2 ELSE CONFIG_SIZE=1
-5375 l%=l%+1 : in_int%=FNinputOpts2(l%,"Joystick",2,"Yes","No") 
-5380 IF in_int%=1 THEN CONFIG_JOY=1 ELSE CONFIG_JOY=0
-5385 l%=l%+2 : in_int%=FNinputOpts2(l%, "Type",1,"Bitmaps","Sprite sheet") 
-5390 IF in_int%=2 THEN CONFIG_TYPE=2 ELSE CONFIG_TYPE=1
-5395 =0
-
-5400 DEF FNprintConfig(line%)
-5410 C. C1: PRINT TAB(0,line%);"Sprite Size  : "; : C. C2
-5420 IF CONFIG_SIZE=2 THEN PRINT "8x8" ELSE PRINT "16x16"
-5425 line%=line%+1
-5430 C. C1: PRINT TAB(0,line%);"Joystick     : "; : C. C2
-5440 IF CONFIG_JOY=1 THEN PRINT "Enabled" ELSE PRINT "Disabled"
-5445 line%=line%+1
-5450 IF CONFIG_JOY=1 THEN C. C1 : PRINT "Joy Delay    : ";:C. C2 : PRINT ;CONFIG_JOYDELAY;: line%=line%+1
-5460 C. C1: PRINT TAB(0,line%);"Editing type : "; : C. C2
-5470 IF CONFIG_TYPE=2 THEN PRINT "Sprite Sheet" ELSE PRINT "Bitmaps"
-5480 line%=line%+1
-5490 =line%
 
 5500 DEF PROCreadConfigFile(f$)
 5510 ch%=OPENIN(f$)
