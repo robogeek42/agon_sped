@@ -498,10 +498,7 @@
 3505 PROCcpbarr(G%+b%*WH%, U%, WH%)
 3507 M%=G%+WH%*b%
 3510 FOR I%=0 TO (WH%)-1
-3520 DATR% = ?(graphics+I%) AND &03
-3525 DATG% = (?(graphics+I%) AND &0C) DIV 4
-3530 DATB% = (?(graphics+I%) AND &30) DIV 16
-3540 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
+3520 IND% = FNrgb2TOind(?(graphics+I%))
 3550 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
 3560 G%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
 3565 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
@@ -538,7 +535,7 @@
 3815 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 3820 FOR I%=0 TO (WH%)-1
 3830 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
-3840 out% = &C0 OR RGBIndex%
+3840 out% = FNindTOrgb2(RGBIndex%)
 3845 BPUT#h%, out%
 3850 NEXT
 3860 CLOSE#h%
@@ -905,29 +902,38 @@
 8080 NEXT
 8090 ENDPROC
 
-8100 DEF FNbbcTOrgb(bbccol%,comp%) : REM convert a bbccol to RGB component-wise
-8110 =FNindTOrgb(CL%(bbccol%))
+8100 DEF FNindTOrgb2(ind%) : REM convert an rgb index to RGB2
+8110 b%=(ind% AND &03)
+8120 g%=(ind% AND &0C) DIV 4
+8130 r%=(ind% AND &30) DIV 16
+8140 =&C0 OR (b%*16) OR (g%*4) OR r%
 
-8120 DEF FNindTOrgb(ind%,comp%) : REM convert rgb index to RGB comp. 0=R,1=G,2=B
-8130 IF comp%=0 THEN tb%=(ind% AND &30) DIV 16
-8135 IF comp%=1 THEN tb%=(ind% AND &0C) DIV 4 
-8140 IF comp%=2 THEN tb%=ind% AND &03
-8150 =TTE%(tb%)
+8150 DEF FNindTOrgb(ind%,comp%) : REM convert rgb index to RGB comp. 0=R,1=G,2=B
+8160 IF comp%=0 THEN tb%=(ind% AND &30) DIV 16
+8165 IF comp%=1 THEN tb%=(ind% AND &0C) DIV 4 
+8170 IF comp%=2 THEN tb%=ind% AND &03
+8180 =TTE%(tb%)
 
-8200 REM Colour mapping to RGB 
-8210 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
-8220 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
-8230 DATA &01, &04, &05, &06, &07, &09, &0B, &0D
-8240 DATA &0E, &10, &11, &12, &13, &14, &16, &17
-8250 DATA &18, &19, &1A, &1B, &1C, &1D, &1E, &1F
-8260 DATA &21, &23, &24, &25, &26, &27, &29, &2B
-8270 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
-8280 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
-8300 REM - RGB colours with a reverse map
-8310 DATA  0, 16,  4, 12, 17, 18, 19, 20,  2, 21,  6, 22, 10, 23, 24, 14
-8320 DATA 25, 26, 27, 28, 29,  8, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39
-8330 DATA  1, 40,  5, 41, 42, 43, 44, 45,  3, 46,  7, 47, 48, 49, 50, 51
-8340 DATA  9, 52, 53, 13, 54, 55, 56, 57, 58, 59, 60, 61, 11, 62, 63, 15
+8200 DEF FNrgb2TOind(val%)
+8210 ind%=((val% AND &30) DIV 16)
+8220 ind%=ind% OR (val% AND &0C)
+8230 ind%=ind% OR ((val% AND &03) * 16)
+8240 =ind%
+
+8300 REM Colour mapping to RGB 
+8310 DATA &00, &20, &08, &28, &02, &22, &0A, &2A
+8320 DATA &15, &30, &0C, &3C, &03, &33, &0F, &3F
+8330 DATA &01, &04, &05, &06, &07, &09, &0B, &0D
+8340 DATA &0E, &10, &11, &12, &13, &14, &16, &17
+8350 DATA &18, &19, &1A, &1B, &1C, &1D, &1E, &1F
+8360 DATA &21, &23, &24, &25, &26, &27, &29, &2B
+8370 DATA &2C, &2D, &2E, &2F, &31, &32, &34, &35
+8380 DATA &36, &37, &38, &39, &3A, &3B, &3D, &3E
+8400 REM - RGB colours with a reverse map
+8410 DATA  0, 16,  4, 12, 17, 18, 19, 20,  2, 21,  6, 22, 10, 23, 24, 14
+8420 DATA 25, 26, 27, 28, 29,  8, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39
+8430 DATA  1, 40,  5, 41, 42, 43, 44, 45,  3, 46,  7, 47, 48, 49, 50, 51
+8440 DATA  9, 52, 53, 13, 54, 55, 56, 57, 58, 59, 60, 61, 11, 62, 63, 15
 
 8500 DEF PROCloadBitshiftTable
 8501 REM lookup table for BitShift for RGBA2222 (don't have nice bit-shift operators)
