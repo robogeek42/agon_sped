@@ -8,20 +8,21 @@
 35 ISEXIT=0 : SW%=320 : SH%=240 
 37 REM ----- config in sped.ini -----
 40 CONFIG_SIZE=1 : CONFIG_JOY=0 : CONFIG_TYPE=0
-42 CONFIG_JOYDELAY=20
+42 CONFIG_JOYDELAY=20 : BM_MAX=8
 44 DIM FEXT$(3) : FEXT$(1)=".rgb" : FEXT$(2)=".rgba" : FEXT$(2)=".dat" 
 46 C1=21: C2=19: REM Help colours (C1=highlight)
 50 PROCconfig("sped.ini")
 52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
 53 WH%=W%*H%
+54 IF BM_MAX>24 THEN BM_MAX=24
 55 REM --------------------------------
-57 GRIDX%=8 : GRIDY%=16 : REM Grid position
+57 GRIDX%=1 : GRIDY%=16 : REM Grid position
 60 GRIDCOL%=8 : CURSCOL%=15
 65 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
 70 DIM CL%(64) : DIM REVLU%(64) : PROCloadLUT
 75 DIM BSTAB%(3,3), TTE%(4) : PROCloadBitshiftTable
 
-80 PALX%=8 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
+80 PALX%=1 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
 82 COL%=1 : REM selected palette colour
 84 PX%=0 : PY%=0 : REM position
 86 BSstate%=0 : DIM BSrect%(4) : REM block select
@@ -34,16 +35,17 @@
 120 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 
 130 REM multi-bitmap sprite setup
-135 NB% = 7 : BM% = 0 : REM number of and current bitmap
+135 NB% = BM_MAX : BM% = 0 : REM number of and current bitmap
+136 NBperrow% = 8
 140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
 148 LoopDir%=1
 
-155 SPX%=150 : SPY%=18 : REM sprite x/y position on screen
-157 BBOXX%=150 : BBOXY%=42 : REM top-left of bitmap boxes
+155 SPX%=134 : SPY%=18 : REM sprite x/y position on screen
+157 BBOXX%=133 : BBOXY%=44 : REM top-left of bitmap boxes
 160 DIM BMX%(NB%), BMY%(NB%)
-165 FOR I%=0 TO NB%-1 : BMX%(I%)=BBOXX% + 24*I% : BMY%(I%)=BBOXY% : NEXT
+165 FOR I%=0 TO NB%-1 : BMX%(I%)=BBOXX% + 24*(I% MOD NBperrow%) : BMY%(I%)=BBOXY%+32*(I% DIV NBperrow%) : NEXT
 
 170 REM declare data for grid
 175 DIM G% WH%*NB%
@@ -98,17 +100,18 @@
 460 REM V=save L=load
 470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
-490 IF key = ASC("e") OR key = ASC("E") THEN PROCexport
+490 IF key = ASC("e") OR key=ASC("E") THEN PROCexport
 495 REM M,N select bitmap
 500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NB% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
 510 IF key = ASC(",") OR key=ASC("<") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NB%-1
 520 IF key = ASC(",") OR key=ASC("<") THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+525 IF key = ASC("g") OR key=ASC("G") THEN PROCgotoBitmap
 530 IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
 535 REM Palette shortcut key, frames select and Loop/cycle type
 540 IF key >= ASC("1") AND key <= ASC("9") THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
-550 IF key = ASC("r") OR key = ASC("R") THEN PROCsetFrames
-555 IF key = ASC("o") OR key = ASC("O") THEN PROCtoggleLoopType
-560 IF key = ASC("i") OR key = ASC("I") THEN PROCsetLoopSpeed
+550 IF key = ASC("r") OR key=ASC("R") THEN PROCsetFrames
+555 IF key = ASC("y") OR key=ASC("Y") THEN PROCtoggleLoopType
+560 IF key = ASC("t") OR key=ASC("T") THEN PROCsetLoopSpeed
 562 IF key = ASC("-") AND BSstate%=0 THEN PROCcopyImage(BM%)
 564 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
 570 IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
@@ -163,8 +166,7 @@
 802 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
 804 PROCprintMainHelp(26)
 806 PROCprintSecondHelp(26)
-808 PROCprintBitmapHelp(19,10)
-809 COLOUR 54 : PRINT TAB(36,12);CHR$(240+LoopType%)
+808 PROCprintBitmapHelp(19,4)
 810 PROCshortcutBox
 820 ENDPROC
 
@@ -200,10 +202,11 @@
 930 ENDPROC
 
 940 DEF PROCprintBitmapHelp(x%,y%)
-945 PROCshort(x%,y%  ,"","<>"," Select bitmap")
-950 PROCshort(x%,y%+1,""," R"," Num frames")
-955 PROCshort(x%,y%+2,""," O"," Loop type") 
-960 PROCshort(x%,y%+3,""," I"," Loop speed")
+945 PROCshort(x%   ,y% ,"","<>G","oto")
+950 PROCshort(x%+ 7,y% ,"f","R","ms")
+955 PROCshort(x%+12,y% ,"t","Y","pe") 
+960 PROCshort(x%+17,y% ,"ra","T","e")
+965 COLOUR 54 : PRINT TAB((SPX%+W%)DIV8+2,2);CHR$(240+LoopType%)
 970 ENDPROC
 
 1000 DEF PROCdrawGrid(w%,h%,x%,y%)
@@ -220,18 +223,24 @@
 1090 ENDPROC
 
 1100 DEF PROCdrawBitmapBoxes
-1110 FOR S%=0 TO NB%-1
-1120 IF S% = BM% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
-1130 PROCrect(BMX%(S%)-2, BMY%(S%)-2, W%+3, H%+3, gc%)
-1135 IF S% < NSF% THEN COLOUR 1 ELSE COLOUR 8
-1140 PRINT TAB(1+(BBOXX% DIV 8) + 3*S%, BBOXY% DIV 8 + 3);S%+1;
-1150 NEXT
-1155 ENDPROC
+1105 FOR S%=0 TO NB%-1
+1110 IF S% = BM% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
+1115 PROCrect(BMX%(S%)-2, BMY%(S%)-2, W%+3, H%+3, gc%)
+1120 IF S% < NSF% THEN COLOUR 1 ELSE COLOUR 8
+1125 PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+H%)DIV8+1);S%+1;
+1130 NEXT
+1135 ENDPROC
 
-1160 DEF PROCsetkeys
-1161 REM set the keys used for movment. Put in proc for future customisation opts
-1170 KEYG(0)=8 : KEYG(1)=21 : KEYG(2)=11 : KEYG(3)=10 
-1180 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
+1140 DEF PROCgotoBitmap
+1145 K = FNinputInt("Goto bitmap:")
+1150 IF K >= 1 AND K <= NB% THEN BM%=K-1
+1155 PROCdrawBitmapBoxes
+1165 ENDPROC
+
+1170 DEF PROCsetkeys
+1171 REM set the keys used for movment. Put in proc for future customisation opts
+1180 KEYG(0)=8 : KEYG(1)=21 : KEYG(2)=11 : KEYG(3)=10 
+1185 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
 1190 ENDPROC
 
 1200 DEF PROCdrawPalette(x%,y%)
@@ -352,6 +361,7 @@
 2102 REM setup the sprite and bitmap. Clear both grids
 2105 LOCAL B%
 2110 FOR B%=0 TO NB%-1
+2112 VDU 23,0,&A0,B%+&FA00;2  : REM clear bitmap
 2115 VDU 23,27,0,B%       : REM Select bitmap
 2120 VDU 23,27,2,w%;h%;0;0; : REM create empty bitmap
 2125 NEXT B%
@@ -375,7 +385,7 @@
 2250 DEF PROCtoggleLoopType
 2252 REM loop type : 0=left to right loop, 1=ping-pong
 2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=0
-2256 COLOUR 54 : PRINT TAB(36,12);CHR$(240+LoopType%)
+2256 PROCprintBitmapHelp(19,4)
 2260 ENDPROC
 
 2270 DEF PROCsetLoopSpeed
@@ -386,7 +396,7 @@
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
 2310 Ctr% = Ctr% - 1
-2320 IF Ctr%=0 THEN SF%=SF%+LoopDir% 
+2320 IF Ctr%=0 AND NSF%>1 THEN SF%=SF%+LoopDir% 
 2322 IF Ctr%=0 AND LoopType%=0 AND SF%=NSF% THEN SF%=0
 2324 IF Ctr%=0 AND LoopType%=1 AND (SF%=NSF%-1 OR SF%=0) THEN LoopDir%=LoopDir% * -1
 2328 IF Ctr%=0 THEN Ctr%=SpriteDelay% 
@@ -500,7 +510,7 @@
 3510 FOR I%=0 TO (WH%)-1
 3520 IND% = FNrgb2TOind(?(graphics+I%))
 3550 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
-3560 G%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
+3560 M%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
 3565 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
 3570 NEXT I%
 3590 ENDPROC
@@ -676,6 +686,7 @@
 5644 IF var$="FEXT3" THEN FEXT$(3)=val$
 5646 IF var$="C1" THEN C1=VAL(val$)
 5648 IF var$="C2" THEN C2=VAL(val$)
+5648 IF var$="BM_MAX" THEN BM_MAX=VAL(val$)
 5690 ENDPROC
 
 5700 DEF FNinputOpts2(line%,base$,hili%,opt1$,opt2$)
