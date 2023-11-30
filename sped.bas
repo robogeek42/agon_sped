@@ -775,7 +775,7 @@
 6260 ENDPROC
 
 6300 DEF PROCcopyBlock(b%)
-6305 LOCAL x%LFS%=BM%:LFE%=LFS%+NumFrames%-1 : ,y%,xx%,yy%,M%
+6305 LOCAL x%,y%,xx%,yy%,M%
 6310 IF BSstate%=0 THEN ENDPROC
 6315 IF BSstate%=2 THEN BSrect%(2)=PX% : BSrect%(3)=PY%
 6317 M%=G%+WH%*b%
