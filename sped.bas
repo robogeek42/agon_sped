@@ -335,11 +335,11 @@
 1905 REM update bitmap from its data drid
 1910 LOCAL clu%,M%
 1920 VDU 23,27,0,bmap%   : REM Select bitmap n
-1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;WH%*4;
+1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;WH%;
 1927 M%=G%+bmap%*WH%
 1930 FOR I%=0 TO WH%-1
 1935 clu%=CL%(M%?I%)     : REM lookup RGB index
-1940 VDU FNindTOrgb(clu%,0), FNindTOrgb(clu%,1), FNindTOrgb(clu%,2), 255
+1940 VDU FNindTOrgb2(clu%)
 1945 NEXT
 1950 PROCupdateSpriteBitmap(bmap%)
 1990 ENDPROC
@@ -349,9 +349,9 @@
 2010 LOCAL clu%
 2020 VDU 23,27,0,bmap%   : REM Select bitmap n
 2025 REM Use Adjust Buffer API
-2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*W%)*4;4;
+2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*W%);1;
 2040 clu%=CL%(c%)     : REM lookup RGB index
-2050 VDU FNindTOrgb(clu%,0), FNindTOrgb(clu%,1), FNindTOrgb(clu%,2), 255
+2050 VDU FNindTOrgb2(clu%)
 2060 PROCupdateSpriteBitmap(bmap%)
 2090 ENDPROC
 
@@ -361,9 +361,11 @@
 2102 REM setup the sprite and bitmap. Clear both grids
 2105 LOCAL B%
 2110 FOR B%=0 TO NB%-1
-2112 VDU 23,0,&A0,B%+&FA00;2  : REM clear bitmap
-2115 VDU 23,27,0,B%       : REM Select bitmap
-2120 VDU 23,27,2,w%;h%;0;0; : REM create empty bitmap
+2112 VDU 23,0,&A0,B%+&FA00;2        : REM clear bitmap buffer
+2114 VDU 23,0,&A0,B%+&FA00;3,w%*h%; : REM create buffer for RGB2 data
+2116 VDU 23,27,0,B%                 : REM Select bitmap
+2118 VDU 23,27,&21,w%;h%;1          : REM create bitmap from buffer. RGBA2222
+2120 VDU 23,0,&A0,B%;5,&42,0;w%*h%;0: REM clear buffer to 0
 2125 NEXT B%
 2130 VDU 23,27,4,0        : REM Select sprite 0
 2135 VDU 23,27,5          : REM Clear frames
@@ -663,7 +665,7 @@
 5280 =i%
 
 5300 DEF PROCconfig(conf_file$)
-5305 VDU 23,0,192,0,23,1,0 
+5305 VDU 23,0,192,0,23,1,0 : REM logical screen, cursor off
 5310 PROCreadConfigFile(conf_file$)
 5335 ENDPROC
 
