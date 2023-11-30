@@ -125,7 +125,7 @@
 585 IF key = ASC("]") AND BSstate%>0 THEN PROCrotateSelected(0,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 586 IF key = ASC("[") AND BSstate%=0 THEN PROCrotateSelected(1,0,0,W%-1,H%-1,BM%)
 587 IF key = ASC("[") AND BSstate%>0 THEN PROCrotateSelected(1,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
-590 PROCshowFilename("")
+590 REM PROCshowFilename("")
 592 PROCprintSecondHelp(26)
 594 PROCgridCursor(1) : PROCblockCursor(1)
 
@@ -158,7 +158,7 @@
 779 PROCsetupChars
 780 PROCprintTitle
 782 PROCprintHelp
-784 PROCshowFilename("")
+784 PROCclearStatusLine
 786 COLOUR 15
 795 ENDPROC
 
@@ -396,9 +396,10 @@
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
 2310 Ctr% = Ctr% - 1
-2320 IF Ctr%=0 AND NSF%>1 THEN SF%=SF%+LoopDir% 
+2320 IF Ctr%=0 AND NSF%>1 THEN SF%=SF%+LoopDir%
 2322 IF Ctr%=0 AND LoopType%=0 AND SF%=NSF% THEN SF%=0
-2324 IF Ctr%=0 AND LoopType%=1 AND (SF%=NSF%-1 OR SF%=0) THEN LoopDir%=LoopDir% * -1
+2324 IF Ctr%=0 AND LoopType%=1 AND (SF%=NSF%-1 OR SF%=0) THEN LoopDir%=LoopDir% * -1 
+2326 IF Ctr%=0 AND NSF%=1 THEN SF%=0 : LoopDir%=1
 2328 IF Ctr%=0 THEN Ctr%=SpriteDelay% 
 2330 VDU 23,27,10,SF% : REM select frame
 2340 *FX 19 : REM wait for refresh
@@ -414,7 +415,7 @@
 
 2500 DEF PROCsetFrames
 2510 K = FNinputInt("Num Frames to Show:")
-2530 IF K >= 1 AND K <= NB% THEN NSF%=K : SF%=0
+2530 IF K >= 1 AND K <= NB% THEN NSF%=K : SF%=0 : LoopDir%=1
 2540 PROCdrawBitmapBoxes
 2550 ENDPROC
 
@@ -437,11 +438,17 @@
 3010 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
 3020 PRINT TAB(0,FLINE%);SPC(40);
 3030 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);fn$;
+3040 ENDPROC
+
+3050 DEF PROCclearStatusLine
+3060 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
+3070 PRINT TAB(0,FLINE%);SPC(40);
 3090 ENDPROC
+
 
 3100 DEF PROCloadSaveFile(SV%)
 3110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
-3120 IF fmt%<1 OR fmt%>3 THEN ENDPROC
+3120 IF fmt%<1 OR fmt%>3 THEN PROCclearStatusLine : ENDPROC
 3130 yn$ = FNinputStr("Multiple Frames (y/N)")
 3140 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
 3150 F$ = FNinputStr("Enter filename:")
@@ -453,16 +460,16 @@
 3205 LOCAL Prefix$, NumFrames%, N%
 3210 Prefix$ = FNinputStr("Enter prefix:")
 3220 NumFrames% = FNinputInt("Enter num frames:")
-3240 IF NumFrames% <1 OR NumFrames% > NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+3240 IF NumFrames% <1 OR NumFrames%+BM% > NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
 3250 FOR N%=0 TO NumFrames%-1
 3255 @%=&01000202
 3260 F$ = Prefix$ + STR$(N%+1) + FEXT$(fmt%)
 3265 @%=&90A
 3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
-3275 IF SV%=1 THEN PROCsaveDataFile(F$, N%, fmt%) ELSE PROCloadDataFile(F$, N%, fmt%)
+3275 IF SV%=1 THEN PROCsaveDataFile(F$, BM%+N%, fmt%) ELSE PROCloadDataFile(F$, BM%+N%, fmt%)
 3280 NEXT N%
 3284 BM%=0 : PROCdrawBitmapBoxes
-3286 IF SV%=0 THEN BM%=0 : PROCupdateScreenGrid(BM%) : NSF%=NumFrames% : SF%=0 : PROCdrawBitmapBoxes
+3286 IF SV%=0 THEN PROCupdateScreenGrid(BM%) : NSF%=NumFrames%+BM% : SF%=0 : LoopDir%=1: PROCdrawBitmapBoxes
 3290 ENDPROC 
 
 3300 DEF PROCloadDataFile(f$, b%, fmt%)
@@ -618,7 +625,7 @@
 4174 IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%): Line%=Line%+10*W%+10 
 4180 NEXT bmid%
 4182 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
-4185 PROCshowFilename(F$)
+4185 REM PROCshowFilename(F$)
 4190 ENDPROC
 
 4200 DEF PROCprintFileLine(FH%, S$)
