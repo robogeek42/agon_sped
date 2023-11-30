@@ -38,6 +38,7 @@
 135 NB% = BM_MAX : BM% = 0 : REM number of and current bitmap
 136 NBperrow% = 8
 140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
+142 LFS%=0 : LFE%=0 : REM Loop frame start and end
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
 148 LoopDir%=1
@@ -102,9 +103,9 @@
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
 490 IF key = ASC("e") OR key=ASC("E") THEN PROCexport
 495 REM M,N select bitmap
-500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NB% : PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NB% : PROCdrawBitmapBoxes(BM%) : PROCupdateScreenGrid(BM%)
 510 IF key = ASC(",") OR key=ASC("<") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NB%-1
-520 IF key = ASC(",") OR key=ASC("<") THEN PROCdrawBitmapBoxes : PROCupdateScreenGrid(BM%)
+520 IF key = ASC(",") OR key=ASC("<") THEN PROCdrawBitmapBoxes(BM%) : PROCupdateScreenGrid(BM%)
 525 IF key = ASC("g") OR key=ASC("G") THEN PROCgotoBitmap
 530 IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
 535 REM Palette shortcut key, frames select and Loop/cycle type
@@ -154,7 +155,7 @@
 772 PROCdrawPalette(PALX%,PALY%)
 774 PROCselectPaletteCol(COL%)
 776 PROCgridCursor(1)
-778 PROCdrawBitmapBoxes
+778 PROCdrawBitmapBoxes(BM%)
 779 PROCsetupChars
 780 PROCprintTitle
 782 PROCprintHelp
@@ -206,7 +207,9 @@
 950 PROCshort(x%+ 7,y% ,"f","R","ms")
 955 PROCshort(x%+12,y% ,"t","Y","pe") 
 960 PROCshort(x%+17,y% ,"ra","T","e")
-965 COLOUR 54 : PRINT TAB((SPX%+W%)DIV8+2,2);CHR$(240+LoopType%)
+965 COLOUR 54 : PRINT TAB((SPX%+W%)DIV8+2,2);
+966 IF LoopType%=0 THEN PRINT CHR$(242);
+967 IF LoopType%=1 THEN PRINT CHR$(241);
 970 ENDPROC
 
 1000 DEF PROCdrawGrid(w%,h%,x%,y%)
@@ -222,11 +225,11 @@
 1080 NEXT
 1090 ENDPROC
 
-1100 DEF PROCdrawBitmapBoxes
+1100 DEF PROCdrawBitmapBoxes(b%)
 1105 FOR S%=0 TO NB%-1
-1110 IF S% = BM% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
+1110 IF S% = b% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
 1115 PROCrect(BMX%(S%)-2, BMY%(S%)-2, W%+3, H%+3, gc%)
-1120 IF S% < NSF% THEN COLOUR 1 ELSE COLOUR 8
+1120 IF S%>=LFS% AND S%<=LFE% THEN COLOUR 1 ELSE COLOUR 8
 1125 PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+H%)DIV8+1);S%+1;
 1130 NEXT
 1135 ENDPROC
@@ -234,7 +237,7 @@
 1140 DEF PROCgotoBitmap
 1145 K = FNinputInt("Goto bitmap:")
 1150 IF K >= 1 AND K <= NB% THEN BM%=K-1
-1155 PROCdrawBitmapBoxes
+1155 PROCdrawBitmapBoxes(BM%)
 1165 ENDPROC
 
 1170 DEF PROCsetkeys
@@ -302,8 +305,8 @@
 
 1650 DEF PROCsetCol(x%,y%,c%)
 1655 REM set colour in screen grid AND Data Grid G%
-1660 ind%=x%+y%*W%: U%?ind% = G%?(ind% + BM%*NB%) 
-1665 G%?(ind% + BM%*NB%)=c%
+1660 ind%=x%+y%*W%: U%?ind% = G%?(ind% + BM%*WH%) 
+1665 G%?(ind% + BM%*WH%)=c%
 1670 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
 1680 PROCupdateBitmapPixel(BM%, x%, y%, c%)
 1690 ENDPROC
@@ -386,7 +389,7 @@
 
 2250 DEF PROCtoggleLoopType
 2252 REM loop type : 0=left to right loop, 1=ping-pong
-2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=0
+2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=LFS%
 2256 PROCprintBitmapHelp(19,4)
 2260 ENDPROC
 
@@ -398,28 +401,43 @@
 2300 DEF PROCshowSprite
 2305 REM show sprite animation
 2310 Ctr% = Ctr% - 1
-2320 IF Ctr%=0 AND NSF%>1 THEN SF%=SF%+LoopDir%
-2322 IF Ctr%=0 AND LoopType%=0 AND SF%=NSF% THEN SF%=0
-2324 IF Ctr%=0 AND LoopType%=1 AND (SF%=NSF%-1 OR SF%=0) THEN LoopDir%=LoopDir% * -1 
-2326 IF Ctr%=0 AND NSF%=1 THEN SF%=0 : LoopDir%=1
-2328 IF Ctr%=0 THEN Ctr%=SpriteDelay% 
+2320 IF Ctr%=0 PROCupdateAnim : Ctr%=SpriteDelay%
 2330 VDU 23,27,10,SF% : REM select frame
 2340 *FX 19 : REM wait for refresh
-2345 VDU 23,27,15 : REM update sprites
-2390 ENDPROC 
+2350 VDU 23,27,15 : REM update sprites
+2360 ENDPROC 
 
-2399 REM ------ Set shortcut keys, Frames etc. ----------------
+2370 DEF PROCupdateAnim
+2380 IF LoopType%=0 PROCanimUp
+2385 IF LoopType%=1 PROCanimPingPong
+2390 ENDPROC
 
-2400 DEF PROCsetShortcutKey
-2410 K = FNinputInt("Shortcut (1-9):")
-2430 IF K >= 1 AND K <= 9 THEN SKey%(K) = COL% :  PROCfilledRect(SCBOXX%+K*16-10,SCBOXY%+14,6,6,COL%)
-2490 ENDPROC
+2400 DEF PROCanimUp
+2410 SF%=SF%+1
+2420 IF SF% > LFE% THEN SF%=LFS%
+2430 ENDPROC
+
+2440 DEF PROCanimPingPong
+2450 SF%=SF%+LoopDir%
+2460 IF LoopDir%= 1 AND SF%>=LFE% THEN LoopDir%=-1 
+2470 IF LoopDir%=-1 AND SF%<=LFS% THEN LoopDir%= 1 
+2480 ENDPROC
+
+2499 REM ------ Set shortcut keys, Frames etc. ----------------
 
 2500 DEF PROCsetFrames
-2510 K = FNinputInt("Num Frames to Show:")
-2530 IF K >= 1 AND K <= NB% THEN NSF%=K : SF%=0 : LoopDir%=1
-2540 PROCdrawBitmapBoxes
+2510 startf = FNinputInt("Start frame:")
+2514 IF startf <1 OR startf>NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+2520 endf = FNinputInt("End frame:")
+2525 IF endf < startf OR endf > NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+2530 LFS%=startf-1 : LFE%=endf-1 : SF%=startf-1 : LoopDir%=1
+2540 PROCdrawBitmapBoxes(BM%)
 2550 ENDPROC
+
+2560 DEF PROCsetShortcutKey
+2570 K = FNinputInt("Shortcut (1-9):")
+2580 IF K >= 1 AND K <= 9 THEN SKey%(K) = COL% :  PROCfilledRect(SCBOXX%+K*16-10,SCBOXY%+14,6,6,COL%)
+2590 ENDPROC
 
 2599 REM ------ undo
 
@@ -464,14 +482,14 @@
 3220 NumFrames% = FNinputInt("Enter num frames:")
 3240 IF NumFrames% <1 OR NumFrames%+BM% > NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
 3250 FOR N%=0 TO NumFrames%-1
+3252 IF SV%=0 THEN PROCdrawBitmapBoxes(N%)
 3255 @%=&01000202
 3260 F$ = Prefix$ + STR$(N%+1) + FEXT$(fmt%)
 3265 @%=&90A
 3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
 3275 IF SV%=1 THEN PROCsaveDataFile(F$, BM%+N%, fmt%) ELSE PROCloadDataFile(F$, BM%+N%, fmt%)
 3280 NEXT N%
-3284 BM%=0 : PROCdrawBitmapBoxes
-3286 IF SV%=0 THEN PROCupdateScreenGrid(BM%) : NSF%=NumFrames%+BM% : SF%=0 : LoopDir%=1: PROCdrawBitmapBoxes
+3286 IF SV%=0 THEN PROCupdateScreenGrid(BM%) : NSF%=NumFrames%+BM% : LFS%=BM%:LFE%=LFS%+NumFrames%-1 : SF%=LFS% : LoopDir%=1: PROCdrawBitmapBoxes(BM%)
 3290 ENDPROC 
 
 3300 DEF PROCloadDataFile(f$, b%, fmt%)
@@ -757,7 +775,7 @@
 6260 ENDPROC
 
 6300 DEF PROCcopyBlock(b%)
-6305 LOCAL x%,y%,xx%,yy%,M%
+6305 LOCAL x%LFS%=BM%:LFE%=LFS%+NumFrames%-1 : ,y%,xx%,yy%,M%
 6310 IF BSstate%=0 THEN ENDPROC
 6315 IF BSstate%=2 THEN BSrect%(2)=PX% : BSrect%(3)=PY%
 6317 M%=G%+WH%*b%
