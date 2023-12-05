@@ -21,6 +21,7 @@
 65 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
 70 DIM CL%(64) : DIM REVLU%(64) : PROCloadLUT
 75 DIM BSTAB%(3,3), TTE%(4) : PROCloadBitshiftTable
+77 CSBASE=&FAC0 : PROCloadColSquares
 
 80 PALX%=1 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
 82 COL%=1 : REM selected palette colour
@@ -253,7 +254,7 @@
 1215 C%=0
 1220 FOR J%=0 TO PALH%-1
 1230 FOR I%=0 TO PALW%-1
-1240 PROCfilledRect(1+x%+I%*10,1+y%+J%*10,6,6,C%)
+1240 PROCcsquare(1+x%+I%*10,1+y%+J%*10,C%)
 1245 C%=C%+1
 1250 NEXT I%
 1260 NEXT J%
@@ -308,7 +309,7 @@
 1655 REM set colour in screen grid AND Data Grid G%
 1660 ind%=x%+y%*W%: U%?ind% = G%?(ind% + BM%*WH%) 
 1665 G%?(ind% + BM%*WH%)=c%
-1670 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
+1670 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, c%)
 1680 PROCupdateBitmapPixel(BM%, x%, y%, c%)
 1690 ENDPROC
 
@@ -331,7 +332,7 @@
 1810 FOR I%=0 TO WH%-1
 1820 col%=M%?I%
 1830 x%=I% MOD W% : y%=I% DIV W%
-1840 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+1840 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
 1850 NEXT I%
 1890 ENDPROC
 
@@ -437,7 +438,7 @@
 
 2560 DEF PROCsetShortcutKey
 2570 K = FNinputInt("Shortcut (1-9):")
-2580 IF K >= 1 AND K <= 9 THEN SKey%(K) = COL% :  PROCfilledRect(SCBOXX%+K*16-10,SCBOXY%+14,6,6,COL%)
+2580 IF K >= 1 AND K <= 9 THEN SKey%(K) = COL% :  PROCcsquare(SCBOXX%+K*16-10,SCBOXY%+14,COL%)
 2590 ENDPROC
 
 2599 REM ------ undo
@@ -561,7 +562,7 @@
 3440 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
 3450 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
 3460 M%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
-3465 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+3465 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
 3470 NEXT I%
 3490 ENDPROC
 
@@ -573,7 +574,7 @@
 3520 IND% = FNrgb2TOind(?(graphics+I%))
 3550 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
 3560 M%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
-3565 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, col%)
+3565 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
 3570 NEXT I%
 3590 ENDPROC
 
@@ -784,7 +785,7 @@
 6010 FOR y%=BSrect%(1) TO BSrect%(3)
 6020 FOR x%=BSrect%(0) TO BSrect%(2)
 6030 M%?(x%+W%*y%)=c%
-6035 PROCfilledRect(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, 6, 6, c%)
+6035 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, c%)
 6040 NEXT x% : NEXT y%
 6050 PROCupdateBitmapFromGrid(b%)
 6095 ENDPROC
@@ -841,7 +842,7 @@
 6535 FOR x%=0 TO BlockW%-1
 6540 xx%=x%+PX% : yy%=y%+PY%
 6550 IF xx%<W% AND yy%<H% THEN M%?(xx%+W%*yy%)=BLOCK%(x%+W%*y%)
-6555 IF xx%<W% AND yy%<H% THEN PROCfilledRect(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, 6, 6, BLOCK%(x%+y%*H%))
+6555 IF xx%<W% AND yy%<H% THEN PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, BLOCK%(x%+y%*H%))
 6560 NEXT x% : NEXT y%
 6570 PROCupdateBitmapFromGrid(b%)
 6590 ENDPROC
@@ -929,7 +930,7 @@
 7204 xx%=i% MOD W% : yy%=i% DIV W%
 7206 M%=G%+WH%*b%
 7210 M%?i%=c% 
-7215 PROCfilledRect(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, 6, 6, c%)
+7215 PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, c%)
 7220 IF xx%>0 THEN IF M%?i%-1 = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
 7225 IF ret%=-1 THEN STOP
 7230 IF xx%<(W%-1) THEN IF M%?i%+1 = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
@@ -1024,6 +1025,31 @@
 8600 REM bitshift lookup 
 8610 DATA 0,1,2,3, 0,4,8,&0C, 0,&10,&20,&30, 0,&40,&80,&C0
 8620 DATA 0,&55,&AA,&FF
+
+8998 REM ------------ colour squares -------------
+8999 REM Use bitmaps to draw colour squares
+
+9000 DEF PROCloadColSquares
+9010 FOR N%=0 TO 63: PROCcreateSq(N%,N%): NEXT
+9020 ENDPROC
+
+9130 DEF PROCcreateSq(csn%,col%)
+9131 REM csn=colour square# (0-63), bm=bitmap# (8-bit), buf=buffID (16-bit)
+9132 LOCAL buf%, d%, s%
+9136 buf%=csn%+CSBASE : d%=7 : s%=d%*d%
+9140 VDU 23,0,&A0,buf%;2     : REM clear bitmap buffer
+9150 VDU 23,0,&A0,buf%;3,s%; : REM create buffer for RGB2 data
+9160 VDU 23,27,&20,buf%;     : REM Select bitmap
+9170 VDU 23,27,&21,d%;d%;1   : REM create bitmap from buffer. RGBA2222
+9180 VDU 23,0,&A0,buf%;5,&42,0;s%;FNindTOrgb2(CL%(col%)) : REM clear buffer to colour
+9190 ENDPROC
+
+9200 DEF PROCcsquare(x%,y%,c%)
+9202 LOCAL buf%
+9205 buf%=c%+CSBASE
+9210 VDU 23,27,&20,buf%;
+9220 VDU 23,27,3,x%;y%;
+9230 ENDPROC
 
 10000 REM  ------------ Error Handling -------------
 10010 VDU 23, 0, 192, 1 : REM turn on normal logical screen scaling
