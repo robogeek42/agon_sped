@@ -27,9 +27,13 @@ v0.14 Add Init file "sped.ini"
 - Sprites can be looped or ping-ponged and delay changed
 
 v0.15 adds Block Fill
+
 v0.16 adds block copy/paste/fill/clear
 
 v0.17 adds flip/mirror, undo
+
 v0.18 adds flood-fill
+
 v0.19 some efficiency improvements. Max 24 bitmaps. ADL support.
 
+v0.20 most issues fixed - first released version
