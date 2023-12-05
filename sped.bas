@@ -1,5 +1,5 @@
 10 REM Sprite editor for the Agon Light and Console 8 by Assif (robogeekoid)
-15 VERSION$="v0.19"
+15 VERSION$="v0.20"
 20 ON ERROR GOTO 10000
 25 DIM graphics 1024 : REM memory for file load 
 26 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
@@ -37,7 +37,7 @@
 130 REM multi-bitmap sprite setup
 135 NB% = BM_MAX : BM% = 0 : REM number of and current bitmap
 136 NBperrow% = 8
-140 NSF% = 1 : SF%=0 : REM Number of sprite frames and current frame
+140 SF%=0 : REM current frame (bitmap) being edited 
 142 LFS%=0 : LFE%=0 : REM Loop frame start and end
 144 SpriteDelay%=10 : Ctr%=SpriteDelay%
 146 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
@@ -237,7 +237,8 @@
 1140 DEF PROCgotoBitmap
 1145 K = FNinputInt("Goto bitmap:")
 1150 IF K >= 1 AND K <= NB% THEN BM%=K-1
-1155 PROCdrawBitmapBoxes(BM%)
+1155 PROCupdateScreenGrid(BM%)
+1160 PROCdrawBitmapBoxes(BM%)
 1165 ENDPROC
 
 1170 DEF PROCsetkeys
@@ -272,7 +273,7 @@
 
 1400 DEF PROCpickCol
 1410 LOCAL col%
-1420 col% = G%?(PX% + PY%*W% + BM%*NB%)
+1420 col% = G%?(PX% + PY%*W% + BM%*WH%)
 1430 PROCselectPaletteCol(col%)
 1440 ENDPROC
 
@@ -450,46 +451,80 @@
 2740 PROCupdateBitmapFromGrid(b%)
 2790 ENDPROC
 
+2799 REM ------ File Handling
 
-2999 REM ------ File Handling
+2800 DEF PROCshowFilename(fn$)
+2805 REM just display filename in status bar
+2810 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
+2820 PRINT TAB(0,FLINE%);SPC(40);
+2830 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);fn$;
+2840 ENDPROC
 
-3000 DEF PROCshowFilename(fn$)
-3005 REM just display filename in status bar
-3010 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
-3020 PRINT TAB(0,FLINE%);SPC(40);
-3030 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);fn$;
-3040 ENDPROC
+2850 DEF PROCclearStatusLine
+2855 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
+2860 PRINT TAB(0,FLINE%);SPC(40);
+2865 ENDPROC
 
-3050 DEF PROCclearStatusLine
-3060 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
-3070 PRINT TAB(0,FLINE%);SPC(40);
-3090 ENDPROC
+2870 DEF PROCstatusMsg(Msg$,col%)
+2875 Xpos%=40-LEN(Msg$)
+2880 COLOUR col% : PRINT TAB(Xpos%,FLINE%);Msg$;
+2885 ENDPROC
 
+3000 DEF PROCloadSaveFile(SV%)
+3010 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
+3015 IF fmt%<1 OR fmt%>3 THEN PROCclearStatusLine : ENDPROC
+3020 yn$ = FNinputStr("Multiple Frames (y/N)")
+3025 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
+3030 F$ = FNinputStr("Enter filename:")
+3035 IF SV%=1 THEN PROCsaveDataFile(F$, BM%, fmt%) ELSE PROCloadDataFile(F$, BM%, fmt%)
+3040 PROCshowFilename(F$)
+3050 ENDPROC
 
-3100 DEF PROCloadSaveFile(SV%)
-3110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
-3120 IF fmt%<1 OR fmt%>3 THEN PROCclearStatusLine : ENDPROC
-3130 yn$ = FNinputStr("Multiple Frames (y/N)")
-3140 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
-3150 F$ = FNinputStr("Enter filename:")
-3160 IF SV%=1 THEN PROCsaveDataFile(F$, BM%, fmt%) ELSE PROCloadDataFile(F$, BM%, fmt%)
-3170 PROCshowFilename(F$)
-3190 ENDPROC
+3060 DEF PROCmultiple(SV%, fmt%)
+3062 IF SV%=0 THEN PROCmultipleLoad(fmt%) ELSE PROCmultipleSave(fmt%)
+3064 ENDPROC
 
-3200 DEF PROCmultiple(SV%, fmt%)
-3205 LOCAL Prefix$, NumFrames%, N%
-3210 Prefix$ = FNinputStr("Enter prefix:")
-3220 NumFrames% = FNinputInt("Enter num frames:")
-3240 IF NumFrames% <1 OR NumFrames%+BM% > NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+3070 DEF FNgetFileName(pat$,nrepl%)
+3072 nums%=INSTR(pat$,"%") : IF nums%=0 THEN =pat$ ELSE wcnt%=1
+3074 IF INSTR(pat$,"%%")>0 THEN wcnt%=2
+3076 IF INSTR(pat$,"%%%")>0 THEN wcnt%=3
+3078 IF INSTR(pat$,"%%%%")>0 THEN wcnt%=4
+3080 nstr$=RIGHT$("0000"+STR$(nrepl%),wcnt%)
+3090 =LEFT$(pat$,nums%-1)+nstr$+MID$(pat$,nums%+wcnt%)
+
+3100 DEF PROCmultipleLoad(fmt%)
+3105 LOCAL Pattern$, NumFrames%, N%, start%
+3110 NumFrames% = FNinputInt("Num frames to load:")
+3115 IF NumFrames% <1 OR NumFrames%+BM% > NB% THEN PROCstatusMsg("Invalid",1) : ENDPROC
+3120 Pattern$ = FNinputStr("Pattern eg f%%.dat")
+3125 start% = FNinputInt("File num from:")
+3130 FOR N%=0 TO NumFrames%-1
+3135 DestFrame%=N%+BM%
+3140 PROCdrawBitmapBoxes(DestFrame%)
+3150 F$ = FNgetFileName(Pattern$,start%+N%)
+3170 COLOUR 7 : PRINT TAB(0,FLINE%);F$;
+3175 PROCloadDataFile(F$, DestFrame%, fmt%)
+3180 NEXT N%
+3182 PROCupdateScreenGrid(BM%) 
+3184 LFS%=BM%:LFE%=LFS%+NumFrames%-1 : SF%=LFS% : LoopDir%=1
+3186 PROCdrawBitmapBoxes(BM%)
+3190 ENDPROC 
+
+3200 DEF PROCmultipleSave(fmt%)
+3205 LOCAL Pattern$, NumFrames%, N%, FromFrame%, ToFrame%, start%
+3210 FromFrame% = FNinputInt("From frame:")
+3215 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
+3220 ToFrame% = FNinputInt("To frame (incl):")
+3225 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
+3227 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
+3230 Pattern$ = FNinputStr("Pattern eg f%%.dat")
+3235 start% = FNinputInt("File num from:") 
+3240 NumFrames%=ToFrame%-FromFrame%+1
 3250 FOR N%=0 TO NumFrames%-1
-3252 IF SV%=0 THEN PROCdrawBitmapBoxes(N%)
-3255 @%=&01000202
-3260 F$ = Prefix$ + STR$(N%+1) + FEXT$(fmt%)
-3265 @%=&90A
-3270 COLOUR 7 : PRINT TAB(22,FLINE%);F$;
-3275 IF SV%=1 THEN PROCsaveDataFile(F$, BM%+N%, fmt%) ELSE PROCloadDataFile(F$, BM%+N%, fmt%)
-3280 NEXT N%
-3286 IF SV%=0 THEN PROCupdateScreenGrid(BM%) : NSF%=NumFrames%+BM% : LFS%=BM%:LFE%=LFS%+NumFrames%-1 : SF%=LFS% : LoopDir%=1: PROCdrawBitmapBoxes(BM%)
+3255 F$ = FNgetFileName(Pattern$,start%+N%)
+3260 PROCstatusMsg(F$,7)
+3265 PROCsaveDataFile(F$, BM%+N%, fmt%)
+3270 NEXT N%
 3290 ENDPROC 
 
 3300 DEF PROCloadDataFile(f$, b%, fmt%)
@@ -501,15 +536,15 @@
 3320 IF fmt%=1 sz%=(WH%*3)
 3321 IF fmt%=2 sz%=(WH%*4)
 3322 IF fmt%=3 sz%=(WH%*1)
-3325 FLEN%=EXT#FHAN% : IF FLEN%<>sz% THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid";: CLOSE#FHAN%: ENDPROC
-3330 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
+3325 FLEN%=EXT#FHAN% : IF FLEN%<>sz% THEN PROCstatusMsg("Invalid",1): CLOSE#FHAN%: ENDPROC
+3330 PROCstatusMsg("ok",10)
 3335 CLOSE#FHAN%
 3340 LSTR$="LOAD " + f$ + " " + STR$(MB%+graphics)
-3345 OSCLI(LSTR$) : PRINT TAB(24,FLINE%);"LOADED";
+3345 OSCLI(LSTR$) : PROCstatusMsg("LOADED",10)
 3350 IF fmt%=1 THEN PROCloadDataFile8bit(f$, b%, 0)
 3355 IF fmt%=2 THEN PROCloadDataFile8bit(f$, b%, 1)
 3360 IF fmt%=3 THEN PROCloadDataFile2bit(f$, b%)
-3365 PRINT TAB(24,FLINE%);"COPIED";
+3365 PROCstatusMsg("COPIED",10)
 3370 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
 3380 PROCupdateBitmapFromGrid(b%)
 3390 ENDPROC
@@ -587,7 +622,7 @@
 3922 SS$=SS$+" bitmap num "+STR$(b%+1)
 3925 ln%=ln%+10
 3930 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
-3932 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
+3932 IF h%=0 THEN PROCstatusMsg("Failed to open",1): ENDPROC
 3933 M%=G%+WH%*b%
 3935 FOR I%=0 TO (WH%)-1
 3940 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
@@ -612,7 +647,7 @@
 4022 SS$=SS$+" bitmap num "+STR$(b%+1)
 4025 ln%=ln%+10
 4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
-4032 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
+4032 IF h%=0 THEN PROCstatusMsg("Failed to open",1) : ENDPROC
 4033 M%=G%+WH%*b%
 4035 FOR I%=0 TO (WH%)-1
 4040 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
@@ -633,7 +668,7 @@
 4120 yn$ = FNinputStr("Multiple Frames (y/N)")
 4125 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
 4130 IF mult%=1 THEN frames% = FNinputInt("Num frames")
-4134 IF mult%=1 AND (frames%<1 OR frames%>NB%) THEN COLOUR 1:PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
+4134 IF mult%=1 AND (frames%<1 OR frames%>NB%) iPROCstatusMsg("Invalid",1) : ENDPROC
 4136 IF mult%=1 THEN bmfrm%=0 : bmto%=frames%-1 ELSE bmfrm%=BM% : bmto%=BM% 
 4140 F$ = FNinputStr("Enter filename:")
 4145 IF F$ = "" THEN PROCshowFilename(F$) : ENDPROC
@@ -847,7 +882,7 @@
 6801 REM rotate
 6805 LOCAL x%,y%,bw%,bh%,i%, ic%,ir%,M%
 6807 bw%=x2%-x1%+1 : bh%=y2%-y1%+1
-6810 IF bw% <> bh% THEN C.1:PRINT TAB(30,FLINE%);"not square"; : ENDPROC
+6810 IF bw% <> bh% THEN PROCstatusMsg("not square",1) : ENDPROC
 6817 M%=G%+WH%*b%
 6820 PROCcpbarr(M%, U%, WH%)
 6822 PROCcpbarr(M%, R%, WH%)
