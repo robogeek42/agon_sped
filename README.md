@@ -7,7 +7,7 @@ Currently works in mode 8 with i a 64 colour, 16x16 or 8x8 7-frame sprite.
 
 VDP2.0.0 is the version used in console8, but can be run on an Agon Light.
 
-![sped screenshot](SpriteEditor_v0.19.png "Sprite Editor screenshot v0.19")
+![sped screenshot](SpriteEditor_v0.21.png "Sprite Editor screenshot v0.21")
 
 v0.7 added the animated sprite
 
@@ -37,3 +37,5 @@ v0.18 adds flood-fill
 v0.19 some efficiency improvements. Max 24 bitmaps. ADL support.
 
 v0.20 most issues fixed - first released version
+
+v0.21 fix flood-fill bug, mirror/flip bugs.

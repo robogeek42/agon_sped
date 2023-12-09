@@ -1,5 +1,5 @@
    10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
-   15 VERSION$="v0.20"
+   15 VERSION$="v0.21"
    20 ON ERROR GOTO 10010
    25 DIM graphics 1024 : REM memory for file load 
    26 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
@@ -294,7 +294,7 @@
  1790 ENDPROC
  1800 DEF PROCupdateScreenGrid(bmap%)
  1801 REM Update the screen grid from data grid G%() for given bitmap
- 1805 LOCAL col%,M%
+ 1805 LOCAL col%,M%,I%,x%,y%
  1807 M%=G%+bmap%*WH%
  1810 FOR I%=0 TO WH%-1
  1820   col%=M%?I%
@@ -304,7 +304,7 @@
  1890 ENDPROC
  1900 DEF PROCupdateBitmapFromGrid(bmap%)
  1905 REM update bitmap from its data drid
- 1910 LOCAL clu%,M%
+ 1910 LOCAL clu%,M%,I%
  1920 VDU 23,27,0,bmap%   : REM Select bitmap n
  1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;WH%;
  1927 M%=G%+bmap%*WH%
@@ -811,7 +811,7 @@
  6890 ENDPROC
  6999 REM -------  Flood fill 
  7000 DEF PROCfloodFill(x%,y%,c%,b%)
- 7005 LOCAL i%, ii%, bcal%, M%
+ 7005 LOCAL i%, ii%, bcol%, M%
  7007 M%=G%+WH%*b%
  7010 PROCcpbarr(M%, U%, WH%)
  7015 i%=x%+W%*y%
@@ -837,13 +837,13 @@
  7206 M%=G%+WH%*b%
  7210 M%?i%=c% 
  7215 PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, c%)
- 7220 IF xx%>0 THEN IF M%?i%-1 = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
+ 7220 IF xx%>0 THEN IF M%?(i%-1) = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
  7225 IF ret%=-1 THEN STOP
- 7230 IF xx%<(W%-1) THEN IF M%?i%+1 = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
+ 7230 IF xx%<(W%-1) THEN IF M%?(i%+1) = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
  7235 IF ret%=-1 THEN STOP
- 7240 IF yy%>0 THEN IF M%?i%-W% = bcol% THEN ret%=FNaddItemFF(i%-W%) : REM up
+ 7240 IF yy%>0 THEN IF M%?(i%-W%) = bcol% THEN ret%=FNaddItemFF(i%-W%) : REM up
  7245 IF ret%=-1 THEN STOP
- 7250 IF yy%<(H%-1) THEN IF M%?i%+W% = bcol% THEN ret%=FNaddItemFF(i%+W%) : REM down
+ 7250 IF yy%<(H%-1) THEN IF M%?(i%+W%) = bcol% THEN ret%=FNaddItemFF(i%+W%) : REM down
  7255 IF ret%=-1 THEN STOP
  7290 ENDPROC
  7299 REM ------- Array routines (eventually Z80) ------------
@@ -876,6 +876,7 @@
  8080 NEXT
  8090 ENDPROC
  8100 DEF FNindTOrgb2(ind%) : REM convert an rgb index to RGB2
+ 8105 LOCAL b%,g%,r%
  8110 b%=(ind% AND &03)
  8120 g%=(ind% AND &0C) DIV 4
  8130 r%=(ind% AND &30) DIV 16
