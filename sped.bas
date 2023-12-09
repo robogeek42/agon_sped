@@ -327,7 +327,7 @@
 
 1800 DEF PROCupdateScreenGrid(bmap%)
 1801 REM Update the screen grid from data grid G%() for given bitmap
-1805 LOCAL col%,M%
+1805 LOCAL col%,M%,I%,x%,y%
 1807 M%=G%+bmap%*WH%
 1810 FOR I%=0 TO WH%-1
 1820 col%=M%?I%
@@ -338,7 +338,7 @@
 
 1900 DEF PROCupdateBitmapFromGrid(bmap%)
 1905 REM update bitmap from its data drid
-1910 LOCAL clu%,M%
+1910 LOCAL clu%,M%,I%
 1920 VDU 23,27,0,bmap%   : REM Select bitmap n
 1925 VDU 23,0,&A0,bmap%+&FA00;5,&C2,0;WH%;
 1927 M%=G%+bmap%*WH%
@@ -977,6 +977,7 @@
 8090 ENDPROC
 
 8100 DEF FNindTOrgb2(ind%) : REM convert an rgb index to RGB2
+8105 LOCAL b%,g%,r%
 8110 b%=(ind% AND &03)
 8120 g%=(ind% AND &0C) DIV 4
 8130 r%=(ind% AND &30) DIV 16
