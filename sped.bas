@@ -902,7 +902,7 @@
 6999 REM -------  Flood fill 
 
 7000 DEF PROCfloodFill(x%,y%,c%,b%)
-7005 LOCAL i%, ii%, bcal%, M%
+7005 LOCAL i%, ii%, bcol%, M%
 7007 M%=G%+WH%*b%
 7010 PROCcpbarr(M%, U%, WH%)
 7015 i%=x%+W%*y%
@@ -931,13 +931,13 @@
 7206 M%=G%+WH%*b%
 7210 M%?i%=c% 
 7215 PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, c%)
-7220 IF xx%>0 THEN IF M%?i%-1 = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
+7220 IF xx%>0 THEN IF M%?(i%-1) = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
 7225 IF ret%=-1 THEN STOP
-7230 IF xx%<(W%-1) THEN IF M%?i%+1 = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
+7230 IF xx%<(W%-1) THEN IF M%?(i%+1) = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
 7235 IF ret%=-1 THEN STOP
-7240 IF yy%>0 THEN IF M%?i%-W% = bcol% THEN ret%=FNaddItemFF(i%-W%) : REM up
+7240 IF yy%>0 THEN IF M%?(i%-W%) = bcol% THEN ret%=FNaddItemFF(i%-W%) : REM up
 7245 IF ret%=-1 THEN STOP
-7250 IF yy%<(H%-1) THEN IF M%?i%+W% = bcol% THEN ret%=FNaddItemFF(i%+W%) : REM down
+7250 IF yy%<(H%-1) THEN IF M%?(i%+W%) = bcol% THEN ret%=FNaddItemFF(i%+W%) : REM down
 7255 IF ret%=-1 THEN STOP
 7290 ENDPROC
 
