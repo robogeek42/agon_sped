@@ -1,9 +1,9 @@
 ## Sprite editor
-sped.bas is a simple sprite editor.
+sped.bas is a sprite editor for the Agon series of retro computers.
 
 Requires VDP2.0.0 as this enables Bitmapped backed Sprites.
 
-Currently works in mode 8 with i a 64 colour, 16x16 or 8x8 7-frame sprite.
+Currently works in mode 8 with 64 colours, 16x16 or 8x8 sprites, maximum 24 frames.
 
 VDP2.0.0 is the version used in console8, but can be run on an Agon Light.
 
@@ -39,3 +39,5 @@ v0.19 some efficiency improvements. Max 24 bitmaps. ADL support.
 v0.20 most issues fixed - first released version
 
 v0.21 fix flood-fill bug, mirror/flip bugs.
+
+v0.22 Add ASM subroutines and fix multiple file save/export
