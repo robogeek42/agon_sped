@@ -516,9 +516,9 @@
 
 3200 DEF PROCmultipleSave(fmt%)
 3205 LOCAL Pattern$, NumFrames%, N%, FromFrame%, ToFrame%, start%
-3210 FromFrame% = FNinputInt("From frame:")
+3210 FromFrame% = FNinputInt("From frame:") -1
 3215 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
-3220 ToFrame% = FNinputInt("To frame (incl):")
+3220 ToFrame% = FNinputInt("To frame (incl):") -1
 3225 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
 3227 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
 3230 Pattern$ = FNinputStr("Pattern eg f%%.dat")
@@ -527,7 +527,7 @@
 3250 FOR N%=0 TO NumFrames%-1
 3255 F$ = FNgetFileName(Pattern$,start%+N%)
 3260 PROCstatusMsg(F$,7)
-3265 PROCsaveDataFile(F$, BM%+N%, fmt%)
+3265 PROCsaveDataFile(F$, N%+FromFrame%, fmt%)
 3270 NEXT N%
 3290 ENDPROC 
 
@@ -669,22 +669,21 @@
 4105 LOCAL frames% : frames%=1
 4110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
 4115 IF fmt%<1 OR fmt%>3 THEN ENDPROC
-4120 yn$ = FNinputStr("Multiple Frames (y/N)")
-4125 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
-4130 IF mult%=1 THEN frames% = FNinputInt("Num frames")
-4134 IF mult%=1 AND (frames%<1 OR frames%>NB%) iPROCstatusMsg("Invalid",1) : ENDPROC
-4136 IF mult%=1 THEN bmfrm%=0 : bmto%=frames%-1 ELSE bmfrm%=BM% : bmto%=BM% 
+4120 FromFrame% = FNinputInt("From frame:") -1
+4125 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
+4130 ToFrame% = FNinputInt("To frame (incl):") -1
+4135 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
+4137 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
 4140 F$ = FNinputStr("Enter filename:")
 4145 IF F$ = "" THEN PROCshowFilename(F$) : ENDPROC
 4150 Line% = FNinputInt("Line number:")
-4160 FOR bmid%=bmfrm% TO bmto% 
-4165 COLOUR 10:PRINT TAB(32,FLINE%);"bm=";STR$(bmid%+1);
+4160 FOR bmid%=FromFrame% TO ToFrame% 
+4165 COLOUR 10:PRINT TAB(30,FLINE%);"bm=";STR$(bmid%+1);
 4170 IF fmt%=1 THEN PROCexportData8bit(F$, bmid%, Line%, 0): Line%=Line%+20*BMW%+10
 4172 IF fmt%=2 THEN PROCexportData8bit(F$, bmid%, Line%, 1): Line%=Line%+20*BMW%+10
 4174 IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%): Line%=Line%+10*BMW%+10 
 4180 NEXT bmid%
-4182 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
-4185 REM PROCshowFilename(F$)
+4182 COLOUR 10:PRINT TAB(37,FLINE%);"ok";
 4190 ENDPROC
 
 4200 DEF PROCprintFileLine(FH%, S$)

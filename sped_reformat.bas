@@ -1,5 +1,5 @@
    10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
-   15 VERSION$="v0.21"
+   15 VERSION$="v0.22"
    20 ON ERROR GOTO 10010
    25 DIM graphics 1024 : REM memory for file load 
    26 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
@@ -12,8 +12,8 @@
    44 DIM FEXT$(3) : FEXT$(1)=".rgb" : FEXT$(2)=".rgba" : FEXT$(2)=".dat" 
    46 C1=21: C2=19: REM Help colours (C1=highlight)
    50 PROCconfig("sped.ini")
-   52 IF CONFIG_SIZE=2 THEN W%=8 : H%=8 ELSE W%=16 : H%=16
-   53 WH%=W%*H%
+   52 IF CONFIG_SIZE=2 THEN BMW%=8 : BMH%=8 ELSE BMW%=16 : BMH%=16
+   53 WH%=BMW%*BMH%
    54 IF BM_MAX>24 THEN BM_MAX=24
    55 REM --------------------------------
    57 GRIDX%=1 : GRIDY%=16 : REM Grid position
@@ -27,6 +27,8 @@
    84 PX%=0 : PY%=0 : REM position
    86 BSstate%=0 : DIM BSrect%(4) : REM block select
    87 HaveBlock%=0 : DIM BLOCK%(WH%) : BlockW%=0:BlockH%=0 : REM copied block
+   90 DIM ASMcopy 5, ASMset 10
+   95 PROCsetupASM
   100 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
   105 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
   110 FLINE%=24 : REM FLINE is line on which filename appears
@@ -51,9 +53,9 @@
   178 FFlenMAX%=WH% : DIM FF%(WH%) : FFlen%=0 : REM stack for flood fill
   180 PROCdrawScreen
   182 COLOUR 15 : PRINT TAB(12,FLINE%);"LOADING";
-  185 PROCcreateSprite(W%,H%)
+  185 PROCcreateSprite(BMW%,BMH%)
   189 REM clear arrays
-  190 FOR B%=0 TO NB%-1 : PROCwbarr(G%+B%*WH%,WH%,0): NEXT B%
+  190 FOR b%=0 TO NB%-1 : PROCwbarr(G%+b%*WH%,WH%,0): NEXT b%
   200 PROCwbarr(U%,WH%,0)
   230 COLOUR 15 : PRINT TAB(12,FLINE%);"       ";
   240 REM Main Loop
@@ -67,14 +69,14 @@
   295   IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
   300   REM grid cursor movement
   310   IF key = KEYG(0) AND PX%>0 THEN PX%=PX%-1 : REM left
-  320   IF key = KEYG(1) AND PX%<(W%-1) THEN PX%=PX%+1 : REM right
+  320   IF key = KEYG(1) AND PX%<(BMW%-1) THEN PX%=PX%+1 : REM right
   330   IF key = KEYG(2) AND PY%>0 THEN PY%=PY%-1 : REM up
-  340   IF key = KEYG(3) AND PY%<(H%-1) THEN PY%=PY%+1 : REM down
+  340   IF key = KEYG(3) AND PY%<(BMH%-1) THEN PY%=PY%+1 : REM down
   341   REM joystick movement 
   342   IF JOY>0 AND (JOY AND 223)=JOY AND PX%>0 THEN PX%=PX%-1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM LEFT
-  343   IF JOY>0 AND (JOY AND 127)=JOY AND PX%<(W%-1) THEN PX%=PX%+1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM RIGHT
+  343   IF JOY>0 AND (JOY AND 127)=JOY AND PX%<(BMW%-1) THEN PX%=PX%+1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM RIGHT
   344   IF JOY>0 AND (JOY AND 253)=JOY AND PY%>0 THEN PY%=PY%-1 : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY : REM UP
-  345   IF JOY>0 AND (JOY AND 247)=JOY AND PY%<(H%-1) THEN PY%=PY%+1 : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY :REM DOWN
+  345   IF JOY>0 AND (JOY AND 247)=JOY AND PY%<(BMH%-1) THEN PY%=PY%+1 : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY :REM DOWN
   350   REM colour select movement
   360   IF (key = KEYP(0) OR key=KEYP(0)-32) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
   370   IF (key = KEYP(1) OR key=KEYP(1)-32) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
@@ -108,15 +110,15 @@
   562   IF key = ASC("-") AND BSstate%=0 THEN PROCcopyImage(BM%)
   564   IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
   570   IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
-  572   IF key = ASC("#") AND BSstate%=0 THEN PROCmirrorSelected(0,0,W%-1,H%-1,BM%)
+  572   IF key = ASC("#") AND BSstate%=0 THEN PROCmirrorSelected(0,0,BMW%-1,BMH%-1,BM%)
   574   IF key = ASC("#") AND BSstate%>0 THEN PROCmirrorSelected(BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
-  576   IF key = ASC("~") AND BSstate%=0 THEN PROCflipSelected(0,0,W%-1,H%-1,BM%)
+  576   IF key = ASC("~") AND BSstate%=0 THEN PROCflipSelected(0,0,BMW%-1,BMH%-1,BM%)
   578   IF key = ASC("~") AND BSstate%>0 THEN PROCflipSelected(BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
   580   IF key = ASC("u") OR key = ASC("U") THEN PROCdoUndo(BM%)
   582   IF key = ASC("/") THEN PROCfloodFill(PX%,PY%,COL%,BM%)
-  584   IF key = ASC("]") AND BSstate%=0 THEN PROCrotateSelected(0,0,0,W%-1,H%-1,BM%)
+  584   IF key = ASC("]") AND BSstate%=0 THEN PROCrotateSelected(0,0,0,BMW%-1,BMH%-1,BM%)
   585   IF key = ASC("]") AND BSstate%>0 THEN PROCrotateSelected(0,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
-  586   IF key = ASC("[") AND BSstate%=0 THEN PROCrotateSelected(1,0,0,W%-1,H%-1,BM%)
+  586   IF key = ASC("[") AND BSstate%=0 THEN PROCrotateSelected(1,0,0,BMW%-1,BMH%-1,BM%)
   587   IF key = ASC("[") AND BSstate%>0 THEN PROCrotateSelected(1,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
   590   REM PROCshowFilename("")
   592   PROCprintSecondHelp(26)
@@ -138,7 +140,7 @@
   755 LOCAL I%
   760 CLS : VDU 23,0,192,0 : REM turn off logical screen scaling
   765 VDU 23, 1, 0 : REM disable text cursor
-  770 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+  770 PROCdrawGrid(BMW%,BMH%,GRIDX%,GRIDY%)
   772 PROCdrawPalette(PALX%,PALY%)
   774 PROCselectPaletteCol(COL%)
   776 PROCgridCursor(1)
@@ -188,7 +190,7 @@
   950 PROCshort(x%+ 7,y% ,"f","R","ms")
   955 PROCshort(x%+12,y% ,"t","Y","pe") 
   960 PROCshort(x%+17,y% ,"ra","T","e")
-  965 COLOUR 54 : PRINT TAB((SPX%+W%)DIV8+2,2);
+  965 COLOUR 54 : PRINT TAB((SPX%+BMW%)DIV8+2,2);
   966 IF LoopType%=0 THEN PRINT CHR$(242);
   967 IF LoopType%=1 THEN PRINT CHR$(241);
   970 ENDPROC
@@ -207,9 +209,9 @@
  1100 DEF PROCdrawBitmapBoxes(b%)
  1105 FOR S%=0 TO NB%-1
  1110   IF S% = b% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
- 1115   PROCrect(BMX%(S%)-2, BMY%(S%)-2, W%+3, H%+3, gc%)
+ 1115   PROCrect(BMX%(S%)-2, BMY%(S%)-2, BMW%+3, BMH%+3, gc%)
  1120   IF S%>=LFS% AND S%<=LFE% THEN COLOUR 1 ELSE COLOUR 8
- 1125   PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+H%)DIV8+1);S%+1;
+ 1125   PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+BMH%)DIV8+1);S%+1;
  1130 NEXT
  1135 ENDPROC
  1140 DEF PROCgotoBitmap
@@ -247,7 +249,7 @@
  1370 ENDPROC
  1400 DEF PROCpickCol
  1410 LOCAL col%
- 1420 col% = G%?(PX% + PY%*W% + BM%*WH%)
+ 1420 col% = G%?(PX% + PY%*BMW% + BM%*WH%)
  1430 PROCselectPaletteCol(col%)
  1440 ENDPROC
  1450 DEF PROCgridCursor(switch%)
@@ -276,7 +278,7 @@
  1599 REM ------ Grid/Bitmap Update Functions
  1650 DEF PROCsetCol(x%,y%,c%)
  1655 REM set colour in screen grid AND Data Grid G%
- 1660 ind%=x%+y%*W%: U%?ind% = G%?(ind% + BM%*WH%) 
+ 1660 ind%=x%+y%*BMW%: U%?ind% = G%?(ind% + BM%*WH%) 
  1665 G%?(ind% + BM%*WH%)=c%
  1670 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, c%)
  1680 PROCupdateBitmapPixel(BM%, x%, y%, c%)
@@ -288,8 +290,8 @@
  1720 PROCcpbarr(G%+bmap%*WH%, U%, WH%)
  1730 PROCwbarr(G%+bmap%*WH%, WH%, col%)
  1745 REM fast clear all cells
- 1750 PROCfilledRect(GRIDX%,GRIDY%, W%*8,H%*8,col%)
- 1760 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+ 1750 PROCfilledRect(GRIDX%,GRIDY%, BMW%*8,BMH%*8,col%)
+ 1760 PROCdrawGrid(BMW%,BMH%,GRIDX%,GRIDY%)
  1770 PROCupdateBitmapFromGrid(bmap%)
  1790 ENDPROC
  1800 DEF PROCupdateScreenGrid(bmap%)
@@ -298,7 +300,7 @@
  1807 M%=G%+bmap%*WH%
  1810 FOR I%=0 TO WH%-1
  1820   col%=M%?I%
- 1830   x%=I% MOD W% : y%=I% DIV W%
+ 1830   x%=I% MOD BMW% : y%=I% DIV BMW%
  1840   PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
  1850 NEXT I%
  1890 ENDPROC
@@ -319,7 +321,7 @@
  2010 LOCAL clu%
  2020 VDU 23,27,0,bmap%   : REM Select bitmap n
  2025 REM Use Adjust Buffer API
- 2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*W%);1;
+ 2030 VDU 23,0,&A0,bmap%+&FA00;5,&C2,(x%+y%*BMW%);1;
  2040 clu%=CL%(c%)     : REM lookup RGB index
  2050 VDU FNindTOrgb2(clu%)
  2060 PROCupdateSpriteBitmap(bmap%)
@@ -327,19 +329,19 @@
  2099 REM ------ Sprite Functions
  2100 DEF PROCcreateSprite(w%,h%)
  2102 REM setup the sprite and bitmap. Clear both grids
- 2105 LOCAL B%
- 2110 FOR B%=0 TO NB%-1
- 2112   VDU 23,0,&A0,B%+&FA00;2        : REM clear bitmap buffer
- 2114   VDU 23,0,&A0,B%+&FA00;3,w%*h%; : REM create buffer for RGB2 data
- 2116   VDU 23,27,0,B%                 : REM Select bitmap
+ 2105 LOCAL b%
+ 2110 FOR b%=0 TO NB%-1
+ 2112   VDU 23,0,&A0,b%+&FA00;2        : REM clear bitmap buffer
+ 2114   VDU 23,0,&A0,b%+&FA00;3,w%*h%; : REM create buffer for RGB2 data
+ 2116   VDU 23,27,0,b%                 : REM Select bitmap
  2118   VDU 23,27,&21,w%;h%;1          : REM create bitmap from buffer. RGBA2222
- 2120   VDU 23,0,&A0,B%;5,&42,0;w%*h%;0: REM clear buffer to 0
- 2125 NEXT B%
+ 2120   VDU 23,0,&A0,b%;5,&42,0;w%*h%;0: REM clear buffer to 0
+ 2125 NEXT b%
  2130 VDU 23,27,4,0        : REM Select sprite 0
  2135 VDU 23,27,5          : REM Clear frames
- 2140 FOR B%=0 TO NB%-1
- 2145   VDU 23,27,6,B%       : REM Add bitmap n as a frame of sprite
- 2150 NEXT B%
+ 2140 FOR b%=0 TO NB%-1
+ 2145   VDU 23,27,6,b%       : REM Add bitmap n as a frame of sprite
+ 2150 NEXT b%
  2160 VDU 23,27,11         : REM Show
  2165 VDU 23,27,7,1        : REM activate
  2170 VDU 23,27,13,SPX%; SPY%; : REM display
@@ -455,9 +457,9 @@
  3190 ENDPROC 
  3200 DEF PROCmultipleSave(fmt%)
  3205 LOCAL Pattern$, NumFrames%, N%, FromFrame%, ToFrame%, start%
- 3210 FromFrame% = FNinputInt("From frame:")
+ 3210 FromFrame% = FNinputInt("From frame:") -1
  3215 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
- 3220 ToFrame% = FNinputInt("To frame (incl):")
+ 3220 ToFrame% = FNinputInt("To frame (incl):") -1
  3225 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
  3227 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
  3230 Pattern$ = FNinputStr("Pattern eg f%%.dat")
@@ -466,7 +468,7 @@
  3250 FOR N%=0 TO NumFrames%-1
  3255   F$ = FNgetFileName(Pattern$,start%+N%)
  3260   PROCstatusMsg(F$,7)
- 3265   PROCsaveDataFile(F$, BM%+N%, fmt%)
+ 3265   PROCsaveDataFile(F$, N%+FromFrame%, fmt%)
  3270 NEXT N%
  3290 ENDPROC 
  3300 DEF PROCloadDataFile(f$, b%, fmt%)
@@ -487,7 +489,7 @@
  3355 IF fmt%=2 THEN PROCloadDataFile8bit(f$, b%, 1)
  3360 IF fmt%=3 THEN PROCloadDataFile2bit(f$, b%)
  3365 PROCstatusMsg("COPIED",10)
- 3370 PROCdrawGrid(W%,H%,GRIDX%,GRIDY%)
+ 3370 PROCdrawGrid(BMW%,BMH%,GRIDX%,GRIDY%)
  3380 PROCupdateBitmapFromGrid(b%)
  3390 ENDPROC
  3400 DEF PROCloadDataFile8bit(f$, b%, alpha%)
@@ -501,7 +503,7 @@
  3430   DATB% = ?(graphics+I%*datw%+2) DIV 85
  3440   IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
  3450   col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
- 3460   M%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
+ 3460   M%?I% = col% : x%=I% MOD BMW% : y%=I% DIV BMW%
  3465   PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
  3470 NEXT I%
  3490 ENDPROC
@@ -512,7 +514,7 @@
  3510 FOR I%=0 TO (WH%)-1
  3520   IND% = FNrgb2TOind(?(graphics+I%))
  3550   col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
- 3560   M%?I% = col% : x%=I% MOD W% : y%=I% DIV W%
+ 3560   M%?I% = col% : x%=I% MOD BMW% : y%=I% DIV BMW%
  3565   PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
  3570 NEXT I%
  3590 ENDPROC
@@ -553,7 +555,7 @@
  3902 LOCAL I%, RGBIndex%, h%, J%, PPL%
  3906 PPL%=8 
  3910 SS$=STRING$(250," ") 
- 3915 SS$=STR$(ln%)+" REM "+f$+" "+STR$(W%)+"x"+STR$(H%)+" "
+ 3915 SS$=STR$(ln%)+" REM "+f$+" "+STR$(BMW%)+"x"+STR$(BMH%)+" "
  3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes pp RGBA" ELSE SS$=SS$+" 3 bytes pp RGB" 
  3922 SS$=SS$+" bitmap num "+STR$(b%+1)
  3925 ln%=ln%+10
@@ -578,7 +580,7 @@
  4004 PIX%=0
  4006 PPL%=16
  4010 SS$=STRING$(250," ") 
- 4015 SS$=STR$(ln%)+" REM "+f$+" "+STR$(W%)+"x"+STR$(H%)+" 1 byte pp RGBA2222" 
+ 4015 SS$=STR$(ln%)+" REM "+f$+" "+STR$(BMW%)+"x"+STR$(BMH%)+" 1 byte pp RGBA2222" 
  4022 SS$=SS$+" bitmap num "+STR$(b%+1)
  4025 ln%=ln%+10
  4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
@@ -599,22 +601,21 @@
  4105 LOCAL frames% : frames%=1
  4110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
  4115 IF fmt%<1 OR fmt%>3 THEN ENDPROC
- 4120 yn$ = FNinputStr("Multiple Frames (y/N)")
- 4125 IF yn$ = "y" OR yn$ = "Y" THEN mult%=1 ELSE mult%=0
- 4130 IF mult%=1 THEN frames% = FNinputInt("Num frames")
- 4134 IF mult%=1 AND (frames%<1 OR frames%>NB%) iPROCstatusMsg("Invalid",1) : ENDPROC
- 4136 IF mult%=1 THEN bmfrm%=0 : bmto%=frames%-1 ELSE bmfrm%=BM% : bmto%=BM% 
+ 4120 FromFrame% = FNinputInt("From frame:") -1
+ 4125 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
+ 4130 ToFrame% = FNinputInt("To frame (incl):") -1
+ 4135 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
+ 4137 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
  4140 F$ = FNinputStr("Enter filename:")
  4145 IF F$ = "" THEN PROCshowFilename(F$) : ENDPROC
  4150 Line% = FNinputInt("Line number:")
- 4160 FOR bmid%=bmfrm% TO bmto% 
- 4165   COLOUR 10:PRINT TAB(32,FLINE%);"bm=";STR$(bmid%+1);
- 4170   IF fmt%=1 THEN PROCexportData8bit(F$, bmid%, Line%, 0): Line%=Line%+20*W%+10
- 4172   IF fmt%=2 THEN PROCexportData8bit(F$, bmid%, Line%, 1): Line%=Line%+20*W%+10
- 4174   IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%): Line%=Line%+10*W%+10 
+ 4160 FOR bmid%=FromFrame% TO ToFrame% 
+ 4165   COLOUR 10:PRINT TAB(30,FLINE%);"bm=";STR$(bmid%+1);
+ 4170   IF fmt%=1 THEN PROCexportData8bit(F$, bmid%, Line%, 0): Line%=Line%+20*BMW%+10
+ 4172   IF fmt%=2 THEN PROCexportData8bit(F$, bmid%, Line%, 1): Line%=Line%+20*BMW%+10
+ 4174   IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%): Line%=Line%+10*BMW%+10 
  4180 NEXT bmid%
- 4182 COLOUR 10:PRINT TAB(36,FLINE%);"ok";
- 4185 REM PROCshowFilename(F$)
+ 4182 COLOUR 10:PRINT TAB(37,FLINE%);"ok";
  4190 ENDPROC
  4200 DEF PROCprintFileLine(FH%, S$)
  4210 REM dos line endings
@@ -703,7 +704,7 @@
  6007 PROCcpbarr(M%, U%, WH%)
  6010 FOR y%=BSrect%(1) TO BSrect%(3)
  6020   FOR x%=BSrect%(0) TO BSrect%(2)
- 6030     M%?(x%+W%*y%)=c%
+ 6030     M%?(x%+BMW%*y%)=c%
  6035     PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, c%)
  6040   NEXT x% : NEXT y%
  6050 PROCupdateBitmapFromGrid(b%)
@@ -734,7 +735,7 @@
  6320 FOR y%=BSrect%(1) TO BSrect%(3)
  6330   FOR x%=BSrect%(0) TO BSrect%(2)
  6340     xx%=x%-BSrect%(0) : yy%=y%-BSrect%(1)
- 6350     BLOCK%(xx%+W%*yy%)=M%?(x%+W%*y%)
+ 6350     BLOCK%(xx%+BMW%*yy%)=M%?(x%+BMW%*y%)
  6360   NEXT x% : NEXT y%
  6370 BlockW%=BSrect%(2)-BSrect%(0)+1
  6375 BlockH%=BSrect%(3)-BSrect%(1)+1
@@ -744,7 +745,7 @@
  6405 LOCAL I%,M%
  6407 M%=G%+WH%*b%
  6420 FOR I%=0 TO WH%-1 : BLOCK%(I%)=M%?I% : NEXT I%
- 6430 BlockW%=W% : BlockH%=H%
+ 6430 BlockW%=BMW% : BlockH%=BMH%
  6440 HaveBlock%=1 : BSstate%=0
  6490 ENDPROC
  6500 DEF PROCpasteBlock(b%)
@@ -755,8 +756,8 @@
  6530 FOR y%=0 TO BlockH%-1
  6535   FOR x%=0 TO BlockW%-1
  6540     xx%=x%+PX% : yy%=y%+PY%
- 6550     IF xx%<W% AND yy%<H% THEN M%?(xx%+W%*yy%)=BLOCK%(x%+W%*y%)
- 6555     IF xx%<W% AND yy%<H% THEN PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, BLOCK%(x%+y%*H%))
+ 6550     IF xx%<BMW% AND yy%<BMH% THEN M%?(xx%+BMW%*yy%)=BLOCK%(x%+BMW%*y%)
+ 6555     IF xx%<BMW% AND yy%<BMH% THEN PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, BLOCK%(x%+y%*BMH%))
  6560   NEXT x% : NEXT y%
  6570 PROCupdateBitmapFromGrid(b%)
  6590 ENDPROC
@@ -768,8 +769,8 @@
  6615 bw%=x2%-x1%+1
  6620 FOR y%=y1% TO y2%
  6630   FOR x%=x1% TO x1%+(bw% DIV 2)-1
- 6635     ic%=x%+W%*y% : REM current
- 6640     io%=(x2%-x%+x1%)+W%*y% : REM opposite
+ 6635     ic%=x%+BMW%*y% : REM current
+ 6640     io%=(x2%-x%+x1%)+BMW%*y% : REM opposite
  6650     t%=M%?ic% : M%?ic%=M%?io% : M%?io%=t% : REM SWAP
  6660   NEXT x% : NEXT y%
  6670 REM BSstate%=0
@@ -783,8 +784,8 @@
  6715 bh%=y2%-y1%+1
  6720 FOR x%=x1% TO x2%
  6730   FOR y%=y1% TO y1%+(bh% DIV 2)-1
- 6735     ic%=x%+W%*y% : REM current
- 6740     io%=x%+W%*(y2%-y%+y1%) : REM opposite
+ 6735     ic%=x%+BMW%*y% : REM current
+ 6740     io%=x%+BMW%*(y2%-y%+y1%) : REM opposite
  6750     t%=M%?ic% : M%?ic%=M%?io% : M%?io%=t% : REM SWAP
  6760   NEXT y% : NEXT x%
  6770 REM BSstate%=0
@@ -800,9 +801,9 @@
  6822 PROCcpbarr(M%, R%, WH%)
  6825 FOR y%=y1% TO y2%
  6830   FOR x%=x1% TO x2%
- 6835     ic%=x%+y%*W%
- 6840     IF d%=0 THEN ir%=(x2%-(y%-y1%)) + (y1%+(x%-x1%))*W%: REM ccw
- 6845     IF d%=1 THEN ir%=(x1%+(y%-y1%)) + (y2%-(x%-x1%))*W%: REM cw
+ 6835     ic%=x%+y%*BMW%
+ 6840     IF d%=0 THEN ir%=(x2%-(y%-y1%)) + (y1%+(x%-x1%))*BMW%: REM ccw
+ 6845     IF d%=1 THEN ir%=(x1%+(y%-y1%)) + (y2%-(x%-x1%))*BMW%: REM cw
  6850     R%?ir%=M%?ic%
  6855   NEXT x% : NEXT y%
  6860 PROCcpbarr(R%,M%,WH%)
@@ -814,7 +815,7 @@
  7005 LOCAL i%, ii%, bcol%, M%
  7007 M%=G%+WH%*b%
  7010 PROCcpbarr(M%, U%, WH%)
- 7015 i%=x%+W%*y%
+ 7015 i%=x%+BMW%*y%
  7020 bcol%=M%?i% : REM background colour to fill
  7030 FFlen%=1 : FF%(FFlen%-1)=i%
  7040 REPEAT 
@@ -833,32 +834,61 @@
  7170 =FFlen%
  7200 DEF PROCdoFloodFill(i%,bcol%,c%,b%)
  7202 LOCAL xx%,yy%,ret%,M%
- 7204 xx%=i% MOD W% : yy%=i% DIV W%
+ 7204 xx%=i% MOD BMW% : yy%=i% DIV BMW%
  7206 M%=G%+WH%*b%
  7210 M%?i%=c% 
  7215 PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, c%)
  7220 IF xx%>0 THEN IF M%?(i%-1) = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
  7225 IF ret%=-1 THEN STOP
- 7230 IF xx%<(W%-1) THEN IF M%?(i%+1) = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
+ 7230 IF xx%<(BMW%-1) THEN IF M%?(i%+1) = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
  7235 IF ret%=-1 THEN STOP
- 7240 IF yy%>0 THEN IF M%?(i%-W%) = bcol% THEN ret%=FNaddItemFF(i%-W%) : REM up
+ 7240 IF yy%>0 THEN IF M%?(i%-BMW%) = bcol% THEN ret%=FNaddItemFF(i%-BMW%) : REM up
  7245 IF ret%=-1 THEN STOP
- 7250 IF yy%<(H%-1) THEN IF M%?(i%+W%) = bcol% THEN ret%=FNaddItemFF(i%+W%) : REM down
+ 7250 IF yy%<(BMH%-1) THEN IF M%?(i%+BMW%) = bcol% THEN ret%=FNaddItemFF(i%+BMW%) : REM down
  7255 IF ret%=-1 THEN STOP
  7290 ENDPROC
  7299 REM ------- Array routines (eventually Z80) ------------
- 7300 DEF PROCwbarr(P%,L%,V%)
- 7301 REM write byte array
- 7310 FOR X%=0 TO L%-1 : P%?X% = V% : NEXT
- 7320 ENDPROC
- 7330 DEF PROCwwarr(P%,L%,V%)
- 7331 REM write word array
- 7340 FOR X%=0 TO L%-1 STEP 4 : P%!X% = V% : NEXT
- 7350 ENDPROC
- 7360 DEF PROCcpbarr(S%,D%,L%)
- 7361 REM copy byte array from S% to D%
- 7370 FOR X%=0 TO L%-1 : D%?X% = S%?X% : NEXT
- 7380 ENDPROC
+ 7300 DEF PROCsetupASM
+ 7305 REM Copy: From (HL) To (DE)
+ 7306 REM       Length in BC (B%=MSB, C%=LSB)
+ 7310 FOR opt=0 TO 3 STEP 3
+ 7320   P%=ASMcopy
+ 7330   [        OPT opt
+ 7340   LDIR ; Load, Increment, Repeat
+ 7350   RET
+ 7360   ]
+ 7370 NEXT
+ 7380 REM Set : Dest (DE)
+ 7390 REM       Length in B,C (B%=LSB, C%=MSB)
+ 7400 FOR opt=0 TO 3 STEP 3
+ 7410   P%=ASMset
+ 7420   [        OPT opt
+ 7430   .LOOP   
+ 7440   LD (DE),A
+ 7450   INC DE
+ 7455   DJNZ LOOP
+ 7460   DEC C
+ 7465   JP NZ, LOOP
+ 7475   RET
+ 7480   ]
+ 7485 NEXT
+ 7590 ENDPROC
+ 7600 DEF PROCwbarr(p%,l%,v%)
+ 7601 REM write byte array. Dest DE, Length CB
+ 7605 LOCAL x%
+ 7610 C%=l% DIV 256 : B%=l% AND 255
+ 7620 D%=p% DIV 256 : E%=p% AND 255
+ 7630 A%=v% AND 255
+ 7640 CALL ASMset
+ 7690 ENDPROC
+ 7700 DEF PROCcpbarr(s%,d%,l%)
+ 7701 REM copy byte array from s% (HL) to d% (DE), len l%
+ 7705 LOCAL x%
+ 7710 B%=l% DIV 256 : C%=l% AND 255
+ 7720 D%=d% DIV 256 : E%=d% AND 255
+ 7730 H%=s% DIV 256 : L%=s% AND 255 
+ 7740 CALL ASMcopy
+ 7790 ENDPROC
  8000 REM ------- Colour lookup Functions ------------
  8005 :
  8010 DEF PROCloadLUT
