@@ -1,4 +1,5 @@
 10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
+11 REM Sprite Sheet version
 15 VERSION$="v0.22"
 20 ON ERROR GOTO 10010
 25 DIM graphics 1024 : REM memory for file load 
@@ -10,7 +11,7 @@
 40 CONFIG_SIZE=1 : CONFIG_JOY=0
 42 CONFIG_JOYDELAY=20 : BM_MAX=8
 46 C1=21: C2=19: REM Help colours (C1=highlight)
-50 PROCconfig("sped.ini")
+50 PROCconfig("sped_ss.ini")
 52 IF CONFIG_SIZE=2 THEN BMW%=8 : BMH%=8 ELSE BMW%=16 : BMH%=16
 53 WH%=BMW%*BMH%
 54 IF BM_MAX>24 THEN BM_MAX=24
@@ -102,9 +103,8 @@
 450 IF key = ASC("p") OR key=ASC("P") THEN PROCpickCol
 455 IF key = ASC("b") OR key=ASC("B") THEN PROCmarkBlock 
 460 REM V=save L=load
-470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadSaveFile(0)
-480 IF key = ASC("v") OR key=ASC("V") THEN PROCloadSaveFile(1) : REM V=saVe file 
-490 IF key = ASC("e") OR key=ASC("E") THEN PROCexport
+470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadFile
+480 IF key = ASC("v") OR key=ASC("V") THEN PROCsaveFile
 495 REM M,N select bitmap
 500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NB% : PROCdrawBitmapBoxes(BM%) : PROCupdateScreenGrid(BM%)
 510 IF key = ASC(",") OR key=ASC("<") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NB%-1
@@ -190,7 +190,7 @@
 865 ENDPROC
 
 880 DEF PROCprintSecondHelp(v%)
-882 PROCshort(11,v%,"","L","oad"): PROCshort(17,v%,"sa","V","e"): PROCshort(23,v%,"","E","xport"): PROCshort(30,v%,"","U","ndo"):  PROCshort(36,v%,"e","X","it")
+882 PROCshort(11,v%,"","L","oad"): PROCshort(17,v%,"sa","V","e"): PROCshort(30,v%,"","U","ndo"):  PROCshort(36,v%,"e","X","it")
 884 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(30,v%+1,"","/","flood")
 888 PROCshort(11,v%+2,"","B","lock") 
 890 PROCshort(17,v%+2,"","-","copy")
@@ -472,223 +472,6 @@
 2875 Xpos%=40-LEN(Msg$)
 2880 COLOUR col% : PRINT TAB(Xpos%,FLINE%);Msg$;
 2885 ENDPROC
-
-3000 DEF PROCloadSaveFile(SV%)
-3010 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
-3015 IF fmt%<1 OR fmt%>3 THEN PROCclearStatusLine : ENDPROC
-3020 yn$ = FNinputStr("Multiple Frames (y/N)")
-3025 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
-3030 F$ = FNinputStr("Enter filename:")
-3035 IF SV%=1 THEN PROCsaveDataFile(F$, BM%, fmt%) ELSE PROCloadDataFile(F$, BM%, fmt%)
-3040 PROCshowFilename(F$)
-3050 ENDPROC
-
-3060 DEF PROCmultiple(SV%, fmt%)
-3062 IF SV%=0 THEN PROCmultipleLoad(fmt%) ELSE PROCmultipleSave(fmt%)
-3064 ENDPROC
-
-3070 DEF FNgetFileName(pat$,nrepl%)
-3072 nums%=INSTR(pat$,"%") : IF nums%=0 THEN =pat$ ELSE wcnt%=1
-3074 IF INSTR(pat$,"%%")>0 THEN wcnt%=2
-3076 IF INSTR(pat$,"%%%")>0 THEN wcnt%=3
-3078 IF INSTR(pat$,"%%%%")>0 THEN wcnt%=4
-3080 nstr$=RIGHT$("0000"+STR$(nrepl%),wcnt%)
-3090 =LEFT$(pat$,nums%-1)+nstr$+MID$(pat$,nums%+wcnt%)
-
-3100 DEF PROCmultipleLoad(fmt%)
-3105 LOCAL Pattern$, NumFrames%, N%, start%
-3110 NumFrames% = FNinputInt("Num frames to load:")
-3115 IF NumFrames% <1 OR NumFrames%+BM% > NB% THEN PROCstatusMsg("Invalid",1) : ENDPROC
-3120 Pattern$ = FNinputStr("Pattern eg f%%.dat")
-3125 start% = FNinputInt("Files numbered from:")
-3130 FOR N%=0 TO NumFrames%-1
-3135 DestFrame%=N%+BM%
-3140 PROCdrawBitmapBoxes(DestFrame%)
-3150 F$ = FNgetFileName(Pattern$,start%+N%)
-3170 COLOUR 7 : PRINT TAB(0,FLINE%);F$;
-3175 PROCloadDataFile(F$, DestFrame%, fmt%)
-3180 NEXT N%
-3182 PROCupdateScreenGrid(BM%) 
-3184 LFS%=BM%:LFE%=LFS%+NumFrames%-1 : SF%=LFS% : LoopDir%=1
-3186 PROCdrawBitmapBoxes(BM%)
-3190 ENDPROC 
-
-3200 DEF PROCmultipleSave(fmt%)
-3205 LOCAL Pattern$, NumFrames%, N%, FromFrame%, ToFrame%, start%
-3210 FromFrame% = FNinputInt("From frame:") -1
-3215 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
-3220 ToFrame% = FNinputInt("To frame (incl):") -1
-3225 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
-3227 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
-3230 Pattern$ = FNinputStr("Pattern eg f%%.dat")
-3235 start% = FNinputInt("Files numbered from:") 
-3240 NumFrames%=ToFrame%-FromFrame%+1
-3250 FOR N%=0 TO NumFrames%-1
-3255 F$ = FNgetFileName(Pattern$,start%+N%)
-3260 PROCstatusMsg(F$,7)
-3265 PROCsaveDataFile(F$, N%+FromFrame%, fmt%)
-3270 NEXT N%
-3290 ENDPROC 
-
-3300 DEF PROCloadDataFile(f$, b%, fmt%)
-3301 REM this loads file to internal memory and copies it out to the sprite
-3302 LOCAL col%, I%, IND%
-3305 PROCshowFilename(f$)
-3310 FHAN%=OPENIN(f$)
-3315 IF FHAN% = 0 THEN COLOUR 1:PRINT TAB(32,FLINE%);"No file"; : ENDPROC
-3320 IF fmt%=1 sz%=(WH%*3)
-3321 IF fmt%=2 sz%=(WH%*4)
-3322 IF fmt%=3 sz%=(WH%*1)
-3325 FLEN%=EXT#FHAN% : IF FLEN%<>sz% THEN PROCstatusMsg("Invalid",1): CLOSE#FHAN%: ENDPROC
-3330 PROCstatusMsg("ok",10)
-3335 CLOSE#FHAN%
-3340 LSTR$="LOAD " + f$ + " " + STR$(MB%+graphics)
-3345 OSCLI(LSTR$) : PROCstatusMsg("LOADED",10)
-3350 IF fmt%=1 THEN PROCloadDataFile8bit(f$, b%, 0)
-3355 IF fmt%=2 THEN PROCloadDataFile8bit(f$, b%, 1)
-3360 IF fmt%=3 THEN PROCloadDataFile2bit(f$, b%)
-3365 PROCstatusMsg("COPIED",10)
-3370 PROCdrawGrid(BMW%,BMH%,GRIDX%,GRIDY%)
-3380 PROCupdateBitmapFromGrid(b%)
-3390 ENDPROC
-
-3400 DEF PROCloadDataFile8bit(f$, b%, alpha%)
-3402 LOCAL DATR%,DATG%,DATB%,IND%,I%,M%,col%,x%,y%
-3405 PROCcpbarr(G%+b%*WH%, U%, WH%)
-3410 IF alpha%=1 THEN datw%=4 ELSE datw%=3
-3412 M%=G%+WH%*b%
-3415 FOR I%=0 TO (WH%)-1
-3420 DATR% = ?(graphics+I%*datw%+0) DIV 85
-3425 DATG% = ?(graphics+I%*datw%+1) DIV 85
-3430 DATB% = ?(graphics+I%*datw%+2) DIV 85
-3440 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
-3450 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
-3460 M%?I% = col% : x%=I% MOD BMW% : y%=I% DIV BMW%
-3465 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
-3470 NEXT I%
-3490 ENDPROC
-
-3500 DEF PROCloadDataFile2bit(f$, b%)
-3502 LOCAL DATR%,DATG%,DATB%,IND%,I%,M%,col%,x%,y%
-3505 PROCcpbarr(G%+b%*WH%, U%, WH%)
-3507 M%=G%+WH%*b%
-3510 FOR I%=0 TO (WH%)-1
-3520 IND% = FNrgb2TOind(?(graphics+I%))
-3550 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
-3560 M%?I% = col% : x%=I% MOD BMW% : y%=I% DIV BMW%
-3565 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
-3570 NEXT I%
-3590 ENDPROC
-
-3650 DEF PROCsaveDataFile(f$, b%, fmt%)
-3660 IF fmt%=1 THEN PROCsaveDataFile8bit(f$, b%, 0)
-3670 IF fmt%=2 THEN PROCsaveDataFile8bit(f$, b%, 1)
-3680 IF fmt%=3 THEN PROCsaveDataFile2bit(f$, b%)
-3690 ENDPROC
-
-3700 DEF PROCsaveDataFile8bit(f$, b%, alpha%)
-3701 REM save raw data to a file. RGB or RGBA 8bit format with no header.
-3705 LOCAL I%, RGBIndex%, h%
-3707 M%=G%+WH%*b%
-3710 h% = OPENOUT(f$)
-3715 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
-3720 FOR I%=0 TO (WH%)-1
-3730 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
-3740 BPUT#h%, FNindTOrgb(RGBIndex%,0)
-3742 BPUT#h%, FNindTOrgb(RGBIndex%,1)
-3744 BPUT#h%, FNindTOrgb(RGBIndex%,2)
-3746 IF alpha%=1 THEN  BPUT#h%, &FF
-3750 NEXT
-3760 CLOSE#h%
-3790 ENDPROC
-
-3800 DEF PROCsaveDataFile2bit(f$, b%)
-3801 REM save raw data to a file. RGBA2222 format with no header.
-3805 LOCAL I%, RGBIndex%, h%
-3807 M%=G%+WH%*b%
-3810 h% = OPENOUT(f$)
-3815 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
-3820 FOR I%=0 TO (WH%)-1
-3830 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
-3840 out% = FNindTOrgb2(RGBIndex%)
-3845 BPUT#h%, out%
-3850 NEXT
-3860 CLOSE#h%
-3890 ENDPROC
-
-3900 DEF PROCexportData8bit(f$, b%, ln%, alpha%)
-3902 LOCAL I%, RGBIndex%, h%, J%, PPL%
-3906 PPL%=8 
-3910 SS$=STRING$(250," ") 
-3915 SS$=STR$(ln%)+" REM "+f$+" "+STR$(BMW%)+"x"+STR$(BMH%)+" "
-3920 IF alpha%=1 THEN SS$=SS$+" 4 bytes pp RGBA" ELSE SS$=SS$+" 3 bytes pp RGB" 
-3922 SS$=SS$+" bitmap num "+STR$(b%+1)
-3925 ln%=ln%+10
-3930 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
-3932 IF h%=0 THEN PROCstatusMsg("Failed to open",1): ENDPROC
-3933 M%=G%+WH%*b%
-3935 FOR I%=0 TO (WH%)-1
-3940 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
-3945 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
-3950 FOR J%=0 TO 2
-3955 IF FNindTOrgb(RGBIndex%,J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(FNindTOrgb(RGBIndex%,J%))
-3960 IF J%<2 THEN SS$=SS$+","
-3964 NEXT J%
-3966 IF alpha%=1 THEN SS$=SS$+",&FF"
-3970 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
-3975 NEXT I%
-3980 PROCprintFileLine(h%, SS$)
-3985 CLOSE#h%
-3990 ENDPROC
-
-4000 DEF PROCexportData2bit(f$,b%,ln%)
-4002 LOCAL PIX%,PPL%,SS$,I%,J%,col%
-4004 PIX%=0
-4006 PPL%=16
-4010 SS$=STRING$(250," ") 
-4015 SS$=STR$(ln%)+" REM "+f$+" "+STR$(BMW%)+"x"+STR$(BMH%)+" 1 byte pp RGBA2222" 
-4022 SS$=SS$+" bitmap num "+STR$(b%+1)
-4025 ln%=ln%+10
-4030 h% = OPENUP(f$) : IF h%=0 THEN h% = OPENOUT(f$) ELSE PTR#h%=EXT#h% 
-4032 IF h%=0 THEN PROCstatusMsg("Failed to open",1) : ENDPROC
-4033 M%=G%+WH%*b%
-4035 FOR I%=0 TO (WH%)-1
-4040 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
-4045 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
-4050 PIX%=0
-4060 IF RGBIndex%>0 THEN PIX%=PIX% OR &C0 : REM alpha=1
-4065 IF PIX%=0 THEN SS$=SS$+"0" ELSE SS$=SS$+"&"+STR$~(PIX%)
-4070 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
-4075 NEXT I%
-4080 PROCprintFileLine(h%, SS$)
-4085 CLOSE#h%
-4090 ENDPROC
-
-4100 DEF PROCexport
-4105 LOCAL frames% : frames%=1
-4110 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
-4115 IF fmt%<1 OR fmt%>3 THEN ENDPROC
-4120 FromFrame% = FNinputInt("From frame:") -1
-4125 IF FromFrame%<0 OR FromFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
-4130 ToFrame% = FNinputInt("To frame (incl):") -1
-4135 IF ToFrame%<0 OR ToFrame%>(NB%-1) THEN PROCstatusMsg("Invalid",1): ENDPROC
-4137 IF FromFrame%>ToFrame% THEN PROCstatusMsg("Invalid",1): ENDPROC
-4140 F$ = FNinputStr("Enter filename:")
-4145 IF F$ = "" THEN PROCshowFilename(F$) : ENDPROC
-4150 Line% = FNinputInt("Line number:")
-4160 FOR bmid%=FromFrame% TO ToFrame% 
-4165 COLOUR 10:PRINT TAB(30,FLINE%);"bm=";STR$(bmid%+1);
-4170 IF fmt%=1 THEN PROCexportData8bit(F$, bmid%, Line%, 0): Line%=Line%+20*BMW%+10
-4172 IF fmt%=2 THEN PROCexportData8bit(F$, bmid%, Line%, 1): Line%=Line%+20*BMW%+10
-4174 IF fmt%=3 THEN PROCexportData2bit(F$,bmid%,Line%): Line%=Line%+10*BMW%+10 
-4180 NEXT bmid%
-4182 COLOUR 10:PRINT TAB(37,FLINE%);"ok";
-4190 ENDPROC
-
-4200 DEF PROCprintFileLine(FH%, S$)
-4210 REM dos line endings
-4220 PRINT#FH%,S$ : BPUT#FH%,10
-4230 ENDPROC
 
 5000 REM ------- Generic Functions
 
