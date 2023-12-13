@@ -65,11 +65,9 @@ for fline in infile.readlines():
     if pat_empty.match(fline):
         continue
 
-    if pat_proc.search(fline) or pat_fn.search(fline):
+    if pat_proc.search(fline) or pat_fn.search(fline) or pat_sep.search(fline): 
         r=(lnum+100) % 100
         lnum=(lnum+100-r)
-        wtmp("\n")
-    if pat_sep.search(fline):
         wtmp("\n")
 
     m = re.match(pat_label, fline)
@@ -83,7 +81,7 @@ for fline in infile.readlines():
 
 tmpfile.close()
 
-# Pass 2, sort out referenes to labels
+# Pass 2, sort out references to labels
 print("Labels:")
 for l,n in labs.items():
     print(l,n)
