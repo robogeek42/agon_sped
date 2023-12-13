@@ -1,11 +1,11 @@
 # TODO List for Sprite Editor sped.bas
 
-- Further Opt to use ASM copy routines
-- Use a sprite map
-- Load BMP files
+v1.00 released.
 
-Rejected ... for now
+Rejected
 - Implement a Full Help Page "h"
+- Use a sprite map - files are too big for Agon to be useful - give up on this
+- Load BMP files - not useful if no spritemap editing
 
 In v0.9 ... v0.13
 - DONE : Implement a multi frame save / multi frame load
@@ -23,3 +23,7 @@ In v0.18
 - DONE : Optimise to use memory buffer for G% array
 - DONE : Use bitmaps for colour squares instead of rect fill
 - DONE : Improve multiple file loading
+In v0.21
+- DONE : Further Opt to use ASM copy routines
+In v1.00 
+- removed colour square opt
