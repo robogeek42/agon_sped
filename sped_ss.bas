@@ -106,9 +106,9 @@
 470 IF key = ASC("l") OR key=ASC("L") THEN PROCloadFile
 480 IF key = ASC("v") OR key=ASC("V") THEN PROCsaveFile
 495 REM M,N select bitmap
-500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NB% : PROCdrawBitmapBoxes(BM%) : PROCupdateScreenGrid(BM%)
+500 IF key = ASC(".") OR key=ASC(">") THEN BM%=(BM%+1) MOD NB% : PROCupdateScreenGrid(BM%)
 510 IF key = ASC(",") OR key=ASC("<") THEN BM%=(BM%-1) : IF BM%<0 THEN BM%=NB%-1
-520 IF key = ASC(",") OR key=ASC("<") THEN PROCdrawBitmapBoxes(BM%) : PROCupdateScreenGrid(BM%)
+520 IF key = ASC(",") OR key=ASC("<") THEN PROCupdateScreenGrid(BM%)
 525 IF key = ASC("g") OR key=ASC("G") THEN PROCgotoBitmap
 530 IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
 535 REM Palette shortcut key, frames select and Loop/cycle type
@@ -158,7 +158,6 @@
 772 PROCdrawPalette(PALX%,PALY%)
 774 PROCselectPaletteCol(COL%)
 776 PROCgridCursor(1)
-778 PROCdrawBitmapBoxes(BM%)
 779 PROCsetupChars
 780 PROCprintTitle
 782 PROCprintHelp
@@ -170,7 +169,7 @@
 802 GCOL 0,15 : MOVE 0,26*8-4 : DRAW 320,26*8-4
 804 PROCprintMainHelp(26)
 806 PROCprintSecondHelp(26)
-808 PROCprintBitmapHelp(19,4)
+808 PROCprintBitmapHelp(19,3)
 810 PROCshortcutBox
 820 ENDPROC
 
@@ -227,22 +226,6 @@
 1075 PLOT 5, x%+X%*8, y%+h%*8
 1080 NEXT
 1090 ENDPROC
-
-1100 DEF PROCdrawBitmapBoxes(b%)
-1105 FOR S%=0 TO NB%-1
-1110 IF S% = b% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
-1115 PROCrect(BMX%(S%)-2, BMY%(S%)-2, BMW%+3, BMH%+3, gc%)
-1120 IF S%>=LFS% AND S%<=LFE% THEN COLOUR 1 ELSE COLOUR 8
-1125 PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+BMH%)DIV8+1);S%+1;
-1130 NEXT
-1135 ENDPROC
-
-1140 DEF PROCgotoBitmap
-1145 K = FNinputInt("Goto bitmap:")
-1150 IF K >= 1 AND K <= NB% THEN BM%=K-1
-1155 PROCupdateScreenGrid(BM%)
-1160 PROCdrawBitmapBoxes(BM%)
-1165 ENDPROC
 
 1170 DEF PROCsetkeys
 1171 REM set the keys used for movment. Put in proc for future customisation opts
@@ -394,7 +377,7 @@
 2250 DEF PROCtoggleLoopType
 2252 REM loop type : 0=left to right loop, 1=ping-pong
 2254 LoopType%=1-LoopType% : LoopDir%=1 : SF%=LFS%
-2256 PROCprintBitmapHelp(19,4)
+2256 PROCprintBitmapHelp(19,3)
 2260 ENDPROC
 
 2270 DEF PROCsetLoopSpeed
@@ -435,7 +418,6 @@
 2520 endf = FNinputInt("End frame:")
 2525 IF endf < startf OR endf > NB% THEN COLOUR 1 : PRINT TAB(32,FLINE%);"Invalid" : ENDPROC
 2530 LFS%=startf-1 : LFE%=endf-1 : SF%=startf-1 : LoopDir%=1
-2540 PROCdrawBitmapBoxes(BM%)
 2550 ENDPROC
 
 2560 DEF PROCsetShortcutKey
@@ -472,6 +454,26 @@
 2875 Xpos%=40-LEN(Msg$)
 2880 COLOUR col% : PRINT TAB(Xpos%,FLINE%);Msg$;
 2885 ENDPROC
+
+3000 DEF PROCloadFile()
+3005 LOCAL fmt%, F$, FHAN%
+3010 fmt% = FNinputInt("Format 1) Gimp RAW RGBA 2) Internal")
+3015 IF fmt%<1 OR fmt%>2 THEN PROCclearStatusLine : ENDPROC
+3020 F$ = FNinputStr("Enter filename:")
+3025 FHAN%=OPENIN(F$)
+3030 IF FHAN% = 0 THEN PROCstatusMsg("No file",1); : ENDPROC
+3035 FLEN%=EXT#FHAN% : PROCstatusMsg(STR$(FLEN%)+" bytes",10)
+3037 CLOSE#FHAN%
+3040 fw%=FNinputInt("image size: width ")
+3045 fh%=FNinputInt("image size: height ")
+3050 IF FLEN% <> fw%*fh%*4 THEN PROCstatusMsg("size err",1); : ENDPROC
+3060 if fmt%=1 THEN PROCloadRawFile(F$,fw%,fh%)
+3095 ENDPROC
+
+3100 DEF PROCloadRawFile(f$,w%,h%))
+3105 LOCAL i%
+3110 PROCshowFilename(f$)
+3195 ENDPROC
 
 5000 REM ------- Generic Functions
 
