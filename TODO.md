@@ -27,3 +27,5 @@ In v0.21
 - DONE : Further Opt to use ASM copy routines
 In v1.00 
 - removed colour square opt
+In v1.01
+- Add Transparency Save

@@ -43,3 +43,5 @@ v0.21 fix flood-fill bug, mirror/flip bugs.
 v0.22 Add ASM subroutines and fix multiple file save/export
 
 v1.00 Released
+
+v1.01 add ability to set a Transparent Colour, and save Alpha accordingly
