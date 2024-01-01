@@ -1,5 +1,5 @@
 10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
-20 VERSION$="v1.00"
+20 VERSION$="v1.01"
 30 ON ERROR GOTO 15010
 40 DIM graphics 1024 : REM memory for file load 
 50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
@@ -24,6 +24,7 @@
 250 DIM BSTAB%(3,3), TTE%(4) : PROCloadBitshiftTable
 260 PALX%=1 : PALY%=146 : PALW%=16 : PALH%=4 : REM palette x/y,w/h 
 270 COL%=1 : REM selected palette colour
+275 TRANSP%=-1
 280 PX%=0 : PY%=0 : REM position
 290 BSstate%=0 : DIM BSrect%(4) : REM block select
 300 HaveBlock%=0 : DIM BLOCK%(WH%) : BlockW%=0:BlockH%=0 : REM copied block
@@ -82,7 +83,7 @@
 900 IF (key = KEYP(0) OR key=KEYP(0)-32) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
 910 IF (key = KEYP(1) OR key=KEYP(1)-32) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
 920 IF (key = KEYP(2) OR key=KEYP(2)-32) AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
-930 IF (key = KEYP(3) OR key=KEYP(3)-32) AND COL%<(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
+930 IF (key = KEYP(3) OR key=KEYP(3)-32) AND COL%<=(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
 940 REM space = set colour, backspace = delete (set to 0), f=fill to current col
 950 IF key = 32 OR key = 13 THEN PROCsetCol(PX%,PY%,COL%)
 960 IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
@@ -105,9 +106,9 @@
 1130 IF key = ASC("k") OR key=ASC("K") THEN PROCsetShortcutKey
 1140 REM Palette shortcut key, frames select and Loop/cycle type
 1150 IF key >= ASC("1") AND key <= ASC("9") THEN IF SKey%(key-48)>=0 THEN PROCselectPaletteCol(SKey%(key-48))
-1160 IF key = ASC("r") OR key=ASC("R") THEN PROCsetFrames
+1160 IF key = ASC("m") OR key=ASC("M") THEN PROCsetFrames
 1170 IF key = ASC("y") OR key=ASC("Y") THEN PROCtoggleLoopType
-1180 IF key = ASC("t") OR key=ASC("T") THEN PROCsetLoopSpeed
+1180 IF key = ASC("r") OR key=ASC("R") THEN PROCsetLoopSpeed
 1190 IF key = ASC("-") AND BSstate%=0 THEN PROCcopyImage(BM%)
 1200 IF key = ASC("-") AND BSstate%>0 THEN PROCcopyBlock(BM%)
 1210 IF key = ASC("=") AND HaveBlock%=1 THEN PROCpasteBlock(BM%)
@@ -121,6 +122,7 @@
 1290 IF key = ASC("]") AND BSstate%>0 THEN PROCrotateSelected(0,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 1300 IF key = ASC("[") AND BSstate%=0 THEN PROCrotateSelected(1,0,0,BMW%-1,BMH%-1,BM%)
 1310 IF key = ASC("[") AND BSstate%>0 THEN PROCrotateSelected(1,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
+1315 IF key = ASC("t") OR key=ASC("T") THEN PROCselectTransp(COL%)
 1320 REM PROCshowFilename("")
 1330 PROCprintSecondHelp(26)
 1340 PROCgridCursor(1) : PROCblockCursor(1)
@@ -192,15 +194,16 @@
 
 2300 DEF PROCshortcutBox
 2310 COLOUR 7 : FOR I%=1 TO 9 : PRINT TAB((SCBOXX% DIV 8) -1 +I%*2,SCBOXY% DIV 8 +1 );I% : NEXT
-2320 COLOUR 8 : PRINT TAB((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4);"Shortcut K=set";
+2320 PROCshort((SCBOXX% DIV 8) +1,SCBOXY% DIV 8 +4,"Short-","K","ey ")
+2325 PROCshort((SCBOXX% DIV 8) +11,SCBOXY% DIV 8 +4,"","T","ransp")
 2330 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
 2340 ENDPROC
 
 2400 DEF PROCprintBitmapHelp(x%,y%)
-2410 PROCshort(x%   ,y% ,"","<>G","oto")
-2420 PROCshort(x%+ 7,y% ,"f","R","ms")
+2410 PROCshort(x%   ,y% ,"","<>G","o")
+2420 PROCshort(x%+ 5,y% ,"fra","M","es")
 2430 PROCshort(x%+12,y% ,"t","Y","pe") 
-2440 PROCshort(x%+17,y% ,"ra","T","e")
+2440 PROCshort(x%+17,y% ,"","R","ate")
 2450 COLOUR 54 : PRINT TAB((SPX%+BMW%)DIV8+2,2);
 2460 IF LoopType%=0 THEN PRINT CHR$(242);
 2470 IF LoopType%=1 THEN PRINT CHR$(241);
@@ -295,7 +298,24 @@
 3730 COLOUR 15
 3740 ENDPROC
 
-3800 REM ------ Grid/Bitmap Update Functions
+3800 DEF PROCselectTransp(c%)
+3810 x% = c% MOD PALW% : y% = c% DIV PALW% : REM horizontal
+3815 IF TRANSP%=-1 THEN PROCcross(1+PALX%+x%*10, 1+PALY%+y%*10, 6, 6, c%) : TRANSP%=c% : ENDPROC
+3820 IF TRANSP%=c% THEN PROCcsquare(1+PALX%+x%*10, 1+PALY%+y%*10, TRANSP%) : TRANSP%=-1 : ENDPROC
+3823 x% = TRANSP% MOD PALW% : y% = TRANSP% DIV PALW%
+3825 PROCcsquare(1+PALX%+x%*10, 1+PALY%+y%*10, TRANSP%)
+3830 TRANSP%=c% : x% = TRANSP% MOD PALW% : y% = TRANSP% DIV PALW%
+3835 PROCcross(1+PALX%+x%*10, 1+PALY%+y%*10, 6, 6, TRANSP%)
+3840 ENDPROC
+
+3850 DEF PROCcross(x%,y%,w%,h%,c%)
+3855 l%=CL%(c%): opp%=REVLU%(63-l%):  REM IF l% < 31 THEN opp%=15 ELSE opp%=0 
+3857 GCOL 0,opp%
+3860 MOVE x%,y% : DRAW x%+w%,y%+h%
+3870 MOVE x%+w%,y% : DRAW x%,y%+h%
+3880 ENDPROC
+
+3899 REM ------ Grid/Bitmap Update Functions
 
 3900 DEF PROCsetCol(x%,y%,c%)
 3910 REM set colour in screen grid AND Data Grid G%
@@ -586,7 +606,9 @@
 8280 BPUT#h%, FNindTOrgb(RGBIndex%,0)
 8290 BPUT#h%, FNindTOrgb(RGBIndex%,1)
 8300 BPUT#h%, FNindTOrgb(RGBIndex%,2)
-8310 IF alpha%=1 THEN  BPUT#h%, &FF
+8305 a%=&FF
+8310 IF alpha%=1 AND TRANSP%=M%?I% THEN a%=&00
+8315 IF alpha%=1 THEN BPUT#h%, a%
 8320 NEXT
 8330 CLOSE#h%
 8340 ENDPROC
@@ -600,6 +622,7 @@
 8460 FOR I%=0 TO (WH%)-1
 8470 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
 8480 out% = FNindTOrgb2(RGBIndex%)
+8485 IF TRANSP%=M%?I% THEN out% = out% AND &3F
 8490 BPUT#h%, out%
 8500 NEXT
 8510 CLOSE#h%
@@ -623,7 +646,8 @@
 8750 IF FNindTOrgb(RGBIndex%,J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(FNindTOrgb(RGBIndex%,J%))
 8760 IF J%<2 THEN SS$=SS$+","
 8770 NEXT J%
-8780 IF alpha%=1 THEN SS$=SS$+",&FF"
+8775 a%=&FF : IF alpha%=1 AND TRANSP%=M%?I% THEN a%=0
+8780 IF alpha%=1 THEN SS$=SS$+",&"+STR$~(a%)
 8790 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
 8800 NEXT I%
 8810 PROCprintFileLine(h%, SS$)
@@ -644,8 +668,8 @@
 9010 FOR I%=0 TO (WH%)-1
 9020 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
 9030 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
-9040 PIX%=0
-9050 IF RGBIndex%>0 THEN PIX%=PIX% OR &C0 : REM alpha=1
+9040 PIX%=RGBIndex%
+9050 IF RGBIndex%>0 AND TRANSP%<>M%?I% THEN PIX%=PIX% OR &C0 : REM alpha=1
 9060 IF PIX%=0 THEN SS$=SS$+"0" ELSE SS$=SS$+"&"+STR$~(PIX%)
 9070 IF I% MOD PPL% < (PPL%-1) THEN SS$=SS$+","
 9080 NEXT I%
