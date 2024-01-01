@@ -1,6 +1,10 @@
 # TODO List for Sprite Editor sped.bas
 
-v1.00 released.
+v1.01 released.
+
+TODO
+- Add SAVE/RESTORE of pallet shortcuts
+- Make this work in a 16 and 4 colour mode
 
 Rejected
 - Implement a Full Help Page "h"
