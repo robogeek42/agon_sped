@@ -51,6 +51,7 @@
 510 DIM G% WH%*NB%
 520 DIM U% WH% : REM for a simple, one level Undo
 530 DIM R% WH% : REM rotation work area
+535 undo%=0 : REM if undo was saved as a block
 540 FFlenMAX%=WH% : DIM FF%(WH%) : FFlen%=0 : REM stack for flood fill
 550 PROCdrawScreen
 560 COLOR 15 : PRINT TAB(12,FLINE%);"LOADING";
@@ -319,16 +320,18 @@
 
 3900 DEF PROCsetCol(x%,y%,c%)
 3910 REM set colour in screen grid AND Data Grid G%
+3915 IF undo%=1 THEN PROCsaveUndo(BM%)
 3920 ind%=x%+y%*BMW%: U%?ind% = G%?(ind% + BM%*WH%) 
 3930 G%?(ind% + BM%*WH%)=c%
 3940 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, c%)
 3950 PROCupdateBitmapPixel(BM%, x%, y%, c%)
+3955 undo%=0
 3960 ENDPROC
 
 4000 DEF PROCclearGrid(col%, bmap%)
 4010 REM clear grid to a colour
 4020 LOCAL i%
-4030 PROCcpbarr(G%+bmap%*WH%, U%, WH%)
+4030 PROCsaveUndo(bmap%)
 4040 PROCwbarr(G%+bmap%*WH%, WH%, col%)
 4050 REM fast clear all cells
 4060 PROCfilledRect(GRIDX%,GRIDY%, BMW%*8,BMH%*8,col%)
@@ -463,7 +466,12 @@
 6260 PROCupdateBitmapFromGrid(b%)
 6270 ENDPROC
 
-6300 REM ------ File Handling
+6300 DEF PROCsaveUndo(b%)
+6310 PROCcpbarr(G%+b%*WH%, U%, WH%)
+6320 undo%=1
+6330 ENDPROC
+
+6399 REM ------ File Handling
 
 6400 DEF PROCshowFilename(fn$)
 6410 REM just display filename in status bar
@@ -563,7 +571,7 @@
 
 7700 DEF PROCloadDataFile8bit(f$, b%, alpha%)
 7710 LOCAL DATR%,DATG%,DATB%,IND%,I%,M%,col%,x%,y%
-7720 PROCcpbarr(G%+b%*WH%, U%, WH%)
+7720 PROCsaveUndo(b%)
 7730 IF alpha%=1 THEN datw%=4 ELSE datw%=3
 7740 M%=G%+WH%*b%
 7750 FOR I%=0 TO (WH%)-1
@@ -579,7 +587,7 @@
 
 7900 DEF PROCloadDataFile2bit(f$, b%)
 7910 LOCAL DATR%,DATG%,DATB%,IND%,I%,M%,col%,x%,y%
-7920 PROCcpbarr(G%+b%*WH%, U%, WH%)
+7920 PROCsaveUndo(b%)
 7930 M%=G%+WH%*b%
 7940 FOR I%=0 TO (WH%)-1
 7950 IND% = FNrgb2TOind(?(graphics+I%))
@@ -792,7 +800,7 @@
 10900 DEF PROCdoBlockFill(c%,b%)
 10910 LOCAL x%,y%,M%
 10920 M%=G%+WH%*b%
-10930 PROCcpbarr(M%, U%, WH%)
+10930 PROCsaveUndo(b%)
 10940 FOR y%=BSrect%(1) TO BSrect%(3)
 10950 FOR x%=BSrect%(0) TO BSrect%(2)
 10960 M%?(x%+BMW%*y%)=c%
@@ -847,7 +855,7 @@
 11700 DEF PROCpasteBlock(b%)
 11710 LOCAL x%,y%,xx%,yy%,M%
 11720 M%=G%+WH%*b%
-11730 PROCcpbarr(M%, U%, WH%)
+11730 PROCsaveUndo(b%)
 11740 IF HaveBlock%=0 THEN ENDPROC
 11750 FOR y%=0 TO BlockH%-1
 11760 FOR x%=0 TO BlockW%-1
@@ -862,7 +870,7 @@
 11910 REM flips left-right
 11920 LOCAL x%,y%,t%,bw%,ic%,io%,M%
 11930 M%=G%+WH%*b%
-11940 PROCcpbarr(M%, U%, WH%)
+11940 PROCsaveUndo(b%)
 11950 bw%=x2%-x1%+1
 11960 FOR y%=y1% TO y2%
 11970 FOR x%=x1% TO x1%+(bw% DIV 2)-1
@@ -878,7 +886,7 @@
 12110 REM flips up-down
 12120 LOCAL x%,y%,t%,bw%,ic%,io%,M%
 12130 M%=G%+WH%*b%
-12140 PROCcpbarr(M%, U%, WH%)
+12140 PROCsaveUndo(b%)
 12150 bh%=y2%-y1%+1
 12160 FOR x%=x1% TO x2%
 12170 FOR y%=y1% TO y1%+(bh% DIV 2)-1
@@ -896,7 +904,7 @@
 12330 bw%=x2%-x1%+1 : bh%=y2%-y1%+1
 12340 IF bw% <> bh% THEN PROCstatusMsg("not square",1) : ENDPROC
 12350 M%=G%+WH%*b%
-12360 PROCcpbarr(M%, U%, WH%)
+12360 PROCsaveUndo(b%)
 12370 PROCcpbarr(M%, R%, WH%)
 12380 FOR y%=y1% TO y2%
 12390 FOR x%=x1% TO x2%
@@ -915,7 +923,7 @@
 12600 DEF PROCfloodFill(x%,y%,c%,b%)
 12610 LOCAL i%, ii%, bcol%, M%
 12620 M%=G%+WH%*b%
-12630 PROCcpbarr(M%, U%, WH%)
+12630 PROCsaveUndo(b%)
 12640 i%=x%+BMW%*y%
 12650 bcol%=M%?i% : REM background colour to fill
 12660 FFlen%=1 : FF%(FFlen%-1)=i%
