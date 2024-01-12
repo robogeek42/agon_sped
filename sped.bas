@@ -12,9 +12,11 @@
 120 CONFIG_JOYDELAY=20 : BM_MAX=8
 130 C1=21: C2=19: REM Help colours (C1=highlight)
 140 PROCconfig("sped.ini")
-150 IF CONFIG_SIZE=2 THEN BMW%=8 : BMH%=8 ELSE BMW%=16 : BMH%=16
+150 IF CONFIG_SIZE=1 THEN BMW%=16 : BMH%=16
+155 IF CONFIG_SIZE=2 THEN BMW%=8 : BMH%=8
 160 WH%=BMW%*BMH%
-170 IF BM_MAX>24 THEN BM_MAX=24
+170 IF CONFIG_SIZE=1 AND BM_MAX>24 THEN BM_MAX=24
+175 IF CONFIG_SIZE=2 AND BM_MAX>48 THEN BM_MAX=48
 
 200 REM --------------------------------
 210 GRIDX%=1 : GRIDY%=16 : REM Grid position
@@ -28,8 +30,6 @@
 280 PX%=0 : PY%=0 : REM position
 290 BSstate%=0 : DIM BSrect%(4) : REM block select
 300 HaveBlock%=0 : DIM BLOCK%(WH%) : BlockW%=0:BlockH%=0 : REM copied block
-310 DIM ASMcopy 5, ASMset 10
-320 PROCsetupASM
 330 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
 340 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
 350 FLINE%=24 : REM FLINE is line on which filename appears
@@ -37,16 +37,18 @@
 370 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
 380 REM multi-bitmap sprite setup
 390 NB% = BM_MAX : BM% = 0 : REM number of and current bitmap
-400 NBperrow% = 8
 410 SF%=0 : REM current frame (bitmap) being edited 
 420 LFS%=0 : LFE%=0 : REM Loop frame start and end
 430 SpriteDelay%=10 : Ctr%=SpriteDelay%
 440 LoopType%=0 : REM 0=left to right loop, 1=ping-pong
 450 LoopDir%=1
 460 SPX%=134 : SPY%=18 : REM sprite x/y position on screen
-470 BBOXX%=133 : BBOXY%=44 : REM top-left of bitmap boxes
+470 IF CONFIG_SIZE=1 NBperrow%=8 :BBOXX%=133 : BBOXY%=44 : REM top-left of bitmap boxes
+475 IF CONFIG_SIZE=2 NBperrow%=12:BBOXX%=84 : BBOXY%=44 : REM top-left of bitmap boxes
 480 DIM BMX%(NB%), BMY%(NB%)
-490 FOR I%=0 TO NB%-1 : BMX%(I%)=BBOXX% + 24*(I% MOD NBperrow%) : BMY%(I%)=BBOXY%+32*(I% DIV NBperrow%) : NEXT
+484 IF CONFIG_SIZE=1 THEN NBxsp%=24 : NBysp%=32
+486 IF CONFIG_SIZE=2 THEN NBxsp%=20 : NBysp%=24
+490 FOR I%=0 TO NB%-1 : BMX%(I%)=BBOXX% + NBxsp%*(I% MOD NBperrow%) : BMY%(I%)=BBOXY%+NBysp%*(I% DIV NBperrow%) : NEXT
 500 REM declare data for grid
 510 DIM G% WH%*NB%
 520 DIM U% WH% : REM for a simple, one level Undo
@@ -228,7 +230,10 @@
 2720 IF S% = b% THEN gc%=CURSCOL% ELSE gc%=GRIDCOL%
 2730 PROCrect(BMX%(S%)-2, BMY%(S%)-2, BMW%+3, BMH%+3, gc%)
 2740 IF S%>=LFS% AND S%<=LFE% THEN COLOUR 1 ELSE COLOUR 8
-2750 PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+BMH%)DIV8+1);S%+1;
+2750 IF CONFIG_SIZE=1 THEN PRINT TAB(BMX%(S%)DIV8+1, (BMY%(S%)+BMH%)DIV8+1);S%+1;
+2755 IF CONFIG_SIZE=2 AND S% MOD 2=0 THEN PRINT TAB(BMX%(S%)DIV8, (BMY%(S%)+BMH%)DIV8+1);S%+1;
+2756 IF CONFIG_SIZE=2 AND S% MOD 2=1 THEN PRINT TAB(BMX%(S%)DIV8, (BMY%(S%)+BMH%)DIV8+1);"  ";
+2757 IF CONFIG_SIZE=2 AND (S%=LFS% OR S%=LFE%) THEN PRINT TAB(BMX%(S%)DIV8, (BMY%(S%)+BMH%)DIV8+1);S%+1;
 2760 NEXT
 2770 ENDPROC
 
@@ -605,7 +610,7 @@
 
 8200 DEF PROCsaveDataFile8bit(f$, b%, alpha%)
 8210 REM save raw data to a file. RGB or RGBA 8bit format with no header.
-8220 LOCAL I%, RGBIndex%, h%
+8220 LOCAL I%, RGBIndex%, h%, a%
 8230 M%=G%+WH%*b%
 8240 h% = OPENOUT(f$)
 8250 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
@@ -637,7 +642,7 @@
 8520 ENDPROC
 
 8600 DEF PROCexportData8bit(f$, b%, ln%, alpha%)
-8610 LOCAL I%, RGBIndex%, h%, J%, PPL%
+8610 LOCAL I%, RGBIndex%, h%, J%, PPL%, a%
 8620 PPL%=8 
 8630 SS$=STRING$(250," ") 
 8640 SS$=STR$(ln%)+" REM "+f$+" "+STR$(BMW%)+"x"+STR$(BMH%)+" "
@@ -960,51 +965,17 @@
 13130 IF ret%=-1 THEN STOP
 13140 ENDPROC
 
-13200 REM ------- Array routines (Z80) ------------
-
-13300 DEF PROCsetupASM
-13310 REM Copy: From (HL) To (DE)
-13320 REM       Length in BC (B%=MSB, C%=LSB)
-13330 FOR opt=0 TO 3 STEP 3
-13340 P%=ASMcopy
-13350 [        OPT opt
-13360          LDIR ; Load, Increment, Repeat
-13370          RET
-13380 ]
-13390 NEXT
-13400 REM Set : Dest (DE)
-13410 REM       Length in B,C (B%=LSB, C%=MSB)
-13420 FOR opt=0 TO 3 STEP 3
-13430 P%=ASMset
-13440 [        OPT opt
-13450  .LOOP   
-13460          LD (DE),A
-13470          INC DE
-13480          DJNZ LOOP
-13490          DEC C
-13500          JP NZ, LOOP
-13510          RET
-13520 ]
-13530 NEXT
-13540 ENDPROC
-
 13600 DEF PROCwbarr(p%,l%,v%)
 13610 REM write byte array. Dest DE, Length CB
 13620 LOCAL x%
-13630 C%=l% DIV 256 : B%=l% AND 255
-13640 D%=p% DIV 256 : E%=p% AND 255
-13650 A%=v% AND 255
-13660 CALL ASMset
-13670 ENDPROC
+13630 FOR x%=0 TO l%-1 : p%?x% = v% : NEXT
+13640 ENDPROC
 
 13700 DEF PROCcpbarr(s%,d%,l%)
 13710 REM copy byte array from s% (HL) to d% (DE), len l%
 13720 LOCAL x%
-13730 B%=l% DIV 256 : C%=l% AND 255
-13740 D%=d% DIV 256 : E%=d% AND 255
-13750 H%=s% DIV 256 : L%=s% AND 255 
-13760 CALL ASMcopy
-13770 ENDPROC
+13730 FOR x%=0 TO l%-1 : d%?x% = s%?x% : NEXT
+13740 ENDPROC
 
 13800 REM ------- Colour lookup Functions ------------
 13810 :
