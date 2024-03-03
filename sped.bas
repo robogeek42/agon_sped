@@ -931,11 +931,12 @@
 12630 PROCsaveUndo(b%)
 12640 i%=x%+BMW%*y%
 12650 bcol%=M%?i% : REM background colour to fill
+12655 IF bcol%=c% ENDPROC
 12660 FFlen%=1 : FF%(FFlen%-1)=i%
 12670 REPEAT 
 12680 ii%=FNnextItemFF
-12690 IF ii% > -1 THEN PROCdoFloodFill(ii%,bcol%,c%,b%)
-12700 UNTIL FFlen%=0
+12690 IF ii% > -1 THEN ffret% = FNdoFloodFill(ii%,bcol%,c%,b%)
+12700 UNTIL FFlen%=0 OR ffret%<0
 12710 PROCupdateBitmapFromGrid(b%) : REM PROCupdateScreenGrid(b%)
 12720 ENDPROC
 
@@ -949,21 +950,21 @@
 12920 FF%(FFlen%)=item% : FFlen%=FFlen%+1 
 12930 =FFlen%
 
-13000 DEF PROCdoFloodFill(i%,bcol%,c%,b%)
+13000 DEF FNdoFloodFill(i%,bcol%,c%,b%)
 13010 LOCAL xx%,yy%,ret%,M%
 13020 xx%=i% MOD BMW% : yy%=i% DIV BMW%
 13030 M%=G%+WH%*b%
 13040 M%?i%=c% 
 13050 PROCcsquare(1+GRIDX%+xx%*8, 1+GRIDY%+yy%*8, c%)
 13060 IF xx%>0 THEN IF M%?(i%-1) = bcol% THEN ret%=FNaddItemFF(i%-1) : REM left
-13070 IF ret%=-1 THEN STOP
+13070 IF ret%=-1 THEN =-1
 13080 IF xx%<(BMW%-1) THEN IF M%?(i%+1) = bcol% THEN ret%=FNaddItemFF(i%+1)  : REM right
-13090 IF ret%=-1 THEN STOP
+13090 IF ret%=-1 THEN =-1
 13100 IF yy%>0 THEN IF M%?(i%-BMW%) = bcol% THEN ret%=FNaddItemFF(i%-BMW%) : REM up
-13110 IF ret%=-1 THEN STOP
+13110 IF ret%=-1 THEN =-1
 13120 IF yy%<(BMH%-1) THEN IF M%?(i%+BMW%) = bcol% THEN ret%=FNaddItemFF(i%+BMW%) : REM down
-13130 IF ret%=-1 THEN STOP
-13140 ENDPROC
+13130 IF ret%=-1 THEN =-1
+13140 =0
 
 13600 DEF PROCwbarr(p%,l%,v%)
 13610 REM write byte array. Dest DE, Length CB
