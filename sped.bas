@@ -1,6 +1,6 @@
 10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
 20 VERSION$="v1.02"
-30 ON ERROR GOTO 15010
+30 ON ERROR GOTO 700
 40 DIM graphics 1024 : REM memory for file load 
 50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
 60 IF ADL=1 THEN MB%=0 ELSE MB%=&40000
