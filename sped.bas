@@ -1,4 +1,4 @@
-10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
+10 REM SPED The Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
 20 VERSION$="v1.05"
 30 ON ERROR GOTO 700
 40 DIM graphics 1024 : REM memory for file load 
@@ -156,8 +156,9 @@
 1590 REM ------ Static Screen Update Functions
 
 1600 DEF PROCprintTitle
-1610 COLOUR 54:PRINT TAB(0,0);"SPRITE EDITOR";
-1620 COLOUR 20:PRINT TAB(14,0);"for the Agon ";
+1605 COLOUR 62:PRINT TAB(0,0);:VDU 245,246,247,248
+1610 COLOUR 54:PRINT TAB(5,0);"SPRITE EDITOR";
+1620 COLOUR 20:PRINT TAB(19,0);"for the Agon ";
 1630 COLOUR 8:PRINT TAB(35,0);VERSION$;
 1640 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
 1650 ENDPROC
@@ -816,7 +817,10 @@
 10630 VDU 23,242,0,&04,&02,&FF,&02,&04,0,0 : REM right 
 10640 VDU 23,243,&10,&38,&54,&10,&10,&10,&10,0 : REM up 
 10650 VDU 23,244,&10,&10,&10,&10,&54,&38,&10,0 : REM down 
-10660 VDU 23,245,&3D,&67,&62,&38,&1C,&46,&E6,&BC : REM Sticky S
+10660 VDU 23,245,&1C,&36,&60,&38,&0C,&D8,&70,0 : REM S
+10662 VDU 23,246,&1C,&36,&26,&6C,&78,&C0,&C0,0 : REM P
+10664 VDU 23,247,&1E,&30,&20,&78,&60,&C0,&F0,0 : REM E
+10666 VDU 23,248,&1C,&36,&22,&62,&46,&CC,&F8,0 : REM D
 10670 ENDPROC
 
 10700 REM -------  block functions 
