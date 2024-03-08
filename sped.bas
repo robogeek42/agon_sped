@@ -1,5 +1,5 @@
 10 REM Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
-20 VERSION$="v1.04"
+20 VERSION$="v1.05"
 30 ON ERROR GOTO 700
 40 DIM graphics 1024 : REM memory for file load 
 50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
@@ -9,7 +9,7 @@
 
 100 REM ----- config in sped.ini -----
 110 CONFIG_SIZE=1 : CONFIG_JOY=0
-120 CONFIG_JOYDELAY=20 : BM_MAX=8
+120 CONFIG_JOYDELAY=20 : BM_MAX=48
 130 C1=21: C2=19: REM Help colours (C1=highlight)
 135 CWRAP=0: REM cursor wrap off
 140 PROCconfig("sped.ini")
@@ -63,6 +63,7 @@
 590 FOR b%=0 TO NB%-1 : PROCwbarr(G%+b%*WH%,WH%,0): NEXT b%
 600 PROCwbarr(U%,WH%,0)
 610 COLOR 15 : PRINT TAB(12,FLINE%);"       ";
+620 STICKY%=0
 
 700 REM ------ Main Loop ------
 710 REPEAT
@@ -119,7 +120,8 @@
 1300 IF key = ASC("[") AND BSstate%=0 THEN PROCrotateSelected(1,0,0,BMW%-1,BMH%-1,BM%)
 1310 IF key = ASC("[") AND BSstate%>0 THEN PROCrotateSelected(1,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 1315 IF key = ASC("t") OR key=ASC("T") THEN PROCselectTransp(COL%)
-1320 REM PROCshowFilename("")
+1317 IF key = ASC("i") OR key=ASC("I") THEN STICKY%=1-STICKY% : PROCdrawSticky
+1320 IF STICKY%=1 THEN PROCsetCol(PX%,PY%,COL%)
 1330 PROCprintSecondHelp(26)
 1340 PROCgridCursor(1) : PROCblockCursor(1)
 1350 REM Nokey GOTO comes here
@@ -203,11 +205,10 @@
 2200 DEF PROCprintSecondHelp(v%)
 2210 PROCshort(11,v%,"","L","oad"): PROCshort(17,v%,"sa","V","e"): PROCshort(23,v%,"","E","xport"): PROCshort(30,v%,"","U","ndo"):  PROCshort(36,v%,"e","X","it")
 2220 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(30,v%+1,"","/","flood")
-2230 PROCshort(11,v%+2,"","B","lock") 
-2240 PROCshort(17,v%+2,"","-","copy")
-2250 IF HaveBlock% THEN PROCshort(23,v%+2,"","=","paste") ELSE C.8:PRINT TAB(23,v%+2);"=paste";
-2260 PROCshort(23,v%+3,"","~","flip") : PROCshort(30,v%+3,"","#","mirror")
-2270 PROCshort(11,v%+3,"","[]","rotate") 
+2230 PROCshort(11,v%+2,"","B","lock"): PROCshort(17,v%+2,"","-","copy")
+2240 IF HaveBlock% THEN PROCshort(23,v%+2,"","=","paste") ELSE C.8:PRINT TAB(23,v%+2);"=paste";
+2250 PROCshort(30,v%+2,"St","I","cky")
+2260 PROCshort(11,v%+3,"","[]","rotate"): PROCshort(23,v%+3,"","~","flip"): PROCshort(30,v%+3,"","#","mirror")
 2280 ENDPROC
 
 2300 DEF PROCshortcutBox
@@ -216,6 +217,11 @@
 2325 PROCshort((SCBOXX% DIV 8) +11,SCBOXY% DIV 8 +4,"","T","ransp")
 2330 PROCrect(SCBOXX%, SCBOXY%-2,16*9,39,7)
 2340 ENDPROC
+
+2350 DEF PROCdrawSticky
+2360 IF STICKY%=1 THEN C.11:PRINT TAB(24,2);:VDU 245:ENDPROC
+2370 PRINT TAB(24,2);" "
+2390 ENDPROC
 
 2400 DEF PROCprintBitmapHelp(x%,y%)
 2410 PROCshort(x%   ,y% ,"","<>G","o")
@@ -810,7 +816,8 @@
 10630 VDU 23,242,0,&04,&02,&FF,&02,&04,0,0 : REM right 
 10640 VDU 23,243,&10,&38,&54,&10,&10,&10,&10,0 : REM up 
 10650 VDU 23,244,&10,&10,&10,&10,&54,&38,&10,0 : REM down 
-10660 ENDPROC
+10660 VDU 23,245,&3D,&67,&62,&38,&1C,&46,&E6,&BC : REM Sticky S
+10670 ENDPROC
 
 10700 REM -------  block functions 
 
