@@ -11,7 +11,7 @@
 110 CONFIG_SIZE=1 : CONFIG_JOY=0
 120 CONFIG_JOYDELAY=20 : BM_MAX=8
 130 C1=21: C2=19: REM Help colours (C1=highlight)
-135 CRWAP=0: REM cursor wrap off
+135 CWRAP=0: REM cursor wrap off
 140 PROCconfig("sped.ini")
 150 IF CONFIG_SIZE=1 THEN BMW%=16 : BMH%=16
 155 IF CONFIG_SIZE=2 THEN BMW%=8 : BMH%=8
