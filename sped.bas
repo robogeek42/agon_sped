@@ -503,6 +503,8 @@
 6500 DEF PROCclearStatusLine
 6510 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
 6520 PRINT TAB(0,FLINE%);SPC(40);
+6522 PRINT TAB(0,FLINE%+1);SPC(40);
+6525 MOVE 0,(FLINE%+1)*8+4 : DRAW 320,(FLINE%+1)*8+4
 6530 ENDPROC
 
 6600 DEF PROCstatusMsg(Msg$,col%)
@@ -514,10 +516,11 @@
 6710 fmt% = FNinputInt("Format 1)RGB8 2)RGBA8 3)RGBA2")
 6720 IF fmt%<1 OR fmt%>3 THEN PROCclearStatusLine : ENDPROC
 6730 yn$ = FNinputStr("Multiple Frames (y/N)")
-6740 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : ENDPROC
+6740 IF yn$ = "y" OR yn$ = "Y" THEN PROCmultiple(SV%, fmt%) : PROCclearStatusLine : ENDPROC
 6750 F$ = FNinputStr("Enter filename:")
 6760 IF SV%=1 THEN PROCsaveDataFile(F$, BM%, fmt%) ELSE PROCloadDataFile(F$, BM%, fmt%)
-6770 PROCshowFilename(F$)
+6770 PROCclearStatusLine
+6775 PROCshowFilename(F$)
 6780 ENDPROC
 
 6800 DEF PROCmultiple(SV%, fmt%)
