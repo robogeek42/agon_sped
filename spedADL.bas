@@ -1,8 +1,11 @@
 10 REM SPED The Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
+15 REM ~~~~   ADL 24-bit Version    ~~~~
+16 REM ~~~~ Run with BBCBASIC24.BIN ~~~~
 20 VERSION$="v1.06"
-30 ON ERROR GOTO 30010
+30 ON ERROR GOTO 710
 40 DIM graphics 1024 : REM memory for file load 
 50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
+55 IF ADL=0 THEN PRINT "ADL BASIC REQUIRED" : END
 60 IF ADL=1 THEN MB%=0 ELSE MB%=&40000
 70 MODE 8
 80 ISEXIT=0 : SW%=320 : SH%=240 
@@ -124,6 +127,8 @@
 1317 IF key = ASC("i") OR key=ASC("I") THEN STICKY%=1-STICKY% : PROCdrawSticky
 1320 IF (key = ASC("h") OR key=ASC("H")) AND BSstate%=0 THEN SHFT%=1 : DR%=FNchooseDir : PROCshiftSelected(DR%,0,0,BMW%-1,BMH%-1,BM%)
 1321 IF (key = ASC("h") OR key=ASC("H")) AND BSstate%>0 THEN SHFT%=1 : DR%=FNchooseDir : PROCshiftSelected(DR%,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
+1322 IF (key = ASC("o") OR key=ASC("O")) AND BSstate%=0 THEN SHFT%=0 : DR%=FNchooseDir : PROCshiftSelected(DR%,0,0,BMW%-1,BMH%-1,BM%)
+1323 IF (key = ASC("o") OR key=ASC("O")) AND BSstate%>0 THEN SHFT%=0 : DR%=FNchooseDir : PROCshiftSelected(DR%,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 1325 IF STICKY%=1 THEN PROCsetCol(PX%,PY%,COL%)
 1330 PROCprintSecondHelp(26)
 1340 PROCgridCursor(1) : PROCblockCursor(1)
@@ -162,7 +167,7 @@
 1605 COLOUR 62:PRINT TAB(0,0);:VDU 245,246,247,248
 1610 COLOUR 54:PRINT TAB(5,0);"SPRITE EDITOR";
 1620 COLOUR 20:PRINT TAB(19,0);"for the Agon ";
-1630 COLOUR 8:PRINT TAB(35,0);VERSION$;
+1630 COLOUR 8:PRINT TAB(32,0);"ADL";VERSION$;
 1640 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
 1650 ENDPROC
 
@@ -1017,10 +1022,10 @@
 13755 LOCAL D$,D%
 13756 D%=0
 13755 IF SHFT%=1 THEN D$=FNinputStr("Shift dir (U-D-L-R)") ELSE D$=FNinputStr("Roll dir (U-D-L-R)")
-13760 IF D$="U" D%=0
-13761 IF D$="D" D%=1
-13762 IF D$="L" D%=2
-13763 IF D$="R" D%=3
+13760 IF D$="U" OR D$="u" D%=0
+13761 IF D$="D" OR D$="d" D%=1
+13762 IF D$="L" OR D$="l" D%=2
+13763 IF D$="R" OR D$="r" D%=3
 13770 =D%
 
 13800 REM ------- Colour lookup Functions ------------
@@ -1102,24 +1107,75 @@
 
 15000 DEF PROCshiftSelected(dr%,x1%,y1%,x2%,y2%,b%)
 15005 REM dr% 0=up,1,dn,2=left,3=right
-15010 IF dr%=2 THEN PROCshiftSelectedLR(x1%,y1%,x2%,y2%,b%,-1)
-15020 IF dr%=3 THEN PROCshiftSelectedLR(x2%,y1%,x1%,y2%,b%,1)
+15010 IF dr%=0 THEN PROCshiftSelectedUp(x1%,y1%,x2%,y2%,b%)
+15020 IF dr%=1 THEN PROCshiftSelectedDown(x1%,y1%,x2%,y2%,b%)
+15030 IF dr%=2 THEN PROCshiftSelectedLeft(x1%,y1%,x2%,y2%,b%)
+15040 IF dr%=3 THEN PROCshiftSelectedRight(x1%,y1%,x2%,y2%,b%)
 15090 ENDPROC
 
-15100 DEF PROCshiftSelectedLR(x1%,y1%,x2%,y2%,b%,inc%)
+15100 DEF PROCshiftSelectedRight(x1%,y1%,x2%,y2%,b%)
 15110 LOCAL x%,y%,t%,bw%,ic%,io%,M%,mem1%
 15130 M%=G%+WH%*b%
 15140 PROCsaveUndo(b%)
 15150 FOR y%=y1% TO y2%
-15155 IF SHFT%=1 THEN mem1%=0 ELSE mem1%=M%?(x2%+BM%*y%)
-15160 FOR x%=x1% TO x2% STEP inc%
+15152 IF SHFT%=1 THEN mem1%=0 
+15154 IF SHFT%=0 THEN mem1%=M%?(x2%+BMW%*y%)
+15160 FOR x%=x1% TO x2%
 15170 ic%=x%+BMW%*y% : REM current
-15175 ic%=x%+inc%+BMW%*y% : REM next
 15180 t%=M%?ic% : M%?ic%=mem1% : mem1%=t%
-15210 NEXT x% : NEXT y%
-15220 REM BSstate%=0
-15230 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
-15240 ENDPROC
+15210 NEXT x% 
+15230 NEXT y%
+15240 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+15250 ENDPROC
+
+15300 DEF PROCshiftSelectedLeft(x1%,y1%,x2%,y2%,b%)
+15310 LOCAL x%,y%,t%,bw%,ic%,io%,M%,mem1%
+15330 M%=G%+WH%*b%
+15340 PROCsaveUndo(b%)
+15350 FOR y%=y1% TO y2%
+15355 IF SHFT%=1 THEN mem1%=0 ELSE mem1%=M%?(x1%+BMW%*y%)
+15360 FOR x%=x1% TO x2%-1
+15370 ic%=x%+BMW%*y% : REM current
+15375 io%=x%+1+BMW%*y% : REM next
+15380 M%?ic%=M%?io% 
+15410 NEXT x% 
+15420 M%?(x2%+BMW%*y%) = mem1%
+15430 NEXT y%
+15440 REM BSstate%=0
+15450 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+15460 ENDPROC
+
+15500 DEF PROCshiftSelectedDown(x1%,y1%,x2%,y2%,b%)
+15510 LOCAL x%,y%,t%,bw%,ic%,io%,M%,mem1%
+15530 M%=G%+WH%*b%
+15540 PROCsaveUndo(b%)
+15550 FOR x%=x1% TO x2%
+15552 IF SHFT%=1 THEN mem1%=0 
+15554 IF SHFT%=0 THEN mem1%=M%?(x%+BMW%*y2%)
+15560 FOR y%=y1% TO y2%
+15570 ic%=x%+BMW%*y% : REM current
+15580 t%=M%?ic% : M%?ic%=mem1% : mem1%=t%
+15610 NEXT y% 
+15630 NEXT x%
+15640 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+15650 ENDPROC
+
+15700 DEF PROCshiftSelectedUp(x1%,y1%,x2%,y2%,b%)
+15710 LOCAL x%,y%,t%,bw%,ic%,io%,M%,mem1%
+15730 M%=G%+WH%*b%
+15740 PROCsaveUndo(b%)
+15750 FOR x%=x1% TO x2%
+15755 IF SHFT%=1 THEN mem1%=0 ELSE mem1%=M%?(x%+BMW%*y1%)
+15760 FOR y%=y1% TO y2%-1
+15770 ic%=x%+BMW%*y% : REM current
+15775 io%=x%+BMW%*(y%+1) : REM next
+15780 M%?ic%=M%?io% 
+15810 NEXT y% 
+15820 M%?(x%+BMW%*y2%) = mem1%
+15830 NEXT x%
+15840 REM BSstate%=0
+15850 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
+15860 ENDPROC
 
 30000 REM  ------------ Error Handling -------------
 30010 REM LABEL_error:
