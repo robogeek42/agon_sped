@@ -1,8 +1,8 @@
 10 REM SPED The Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
 20 VERSION$="v1.05"
 30 ON ERROR GOTO 700
-40 DIM graphics 1024 : REM memory for file load 
-50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
+40 DIM graphics 1024
+50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0
 60 IF ADL=1 THEN MB%=0 ELSE MB%=&40000
 70 MODE 8
 80 ISEXIT=0 : SW%=320 : SH%=240 
@@ -19,7 +19,7 @@
 170 IF CONFIG_SIZE=1 AND BM_MAX>24 THEN BM_MAX=24
 175 IF CONFIG_SIZE=2 AND BM_MAX>48 THEN BM_MAX=48
 
-200 REM --------------------------------
+200 :
 210 GRIDX%=1 : GRIDY%=16 : REM Grid position
 220 GRIDCOL%=8 : CURSCOL%=15
 230 SCBOXX%=170 : SCBOXY%=148 : REM shortcut box pos
@@ -36,7 +36,6 @@
 350 FLINE%=24 : REM FLINE is line on which filename appears
 360 F$=STRING$(20," ") 
 370 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
-380 REM multi-bitmap sprite setup
 390 NB% = BM_MAX : BM% = 0 : REM number of and current bitmap
 410 SF%=0 : REM current frame (bitmap) being edited 
 420 LFS%=0 : LFE%=0 : REM Loop frame start and end
@@ -45,7 +44,7 @@
 450 LoopDir%=1
 460 SPX%=134 : SPY%=18 : REM sprite x/y position on screen
 470 IF CONFIG_SIZE=1 NBperrow%=8 :BBOXX%=133 : BBOXY%=44 : REM top-left of bitmap boxes
-475 IF CONFIG_SIZE=2 NBperrow%=12:BBOXX%=84 : BBOXY%=44 : REM top-left of bitmap boxes
+475 IF CONFIG_SIZE=2 NBperrow%=12:BBOXX%=84 : BBOXY%=44
 480 DIM BMX%(NB%), BMY%(NB%)
 484 IF CONFIG_SIZE=1 THEN NBxsp%=24 : NBysp%=32
 486 IF CONFIG_SIZE=2 THEN NBxsp%=20 : NBysp%=24
@@ -164,10 +163,9 @@
 1650 ENDPROC
 
 1700 DEF PROCdrawScreen
-1710 REM draw screen - titles, instructions.
 1720 LOCAL I%
-1730 CLS : VDU 23,0,192,0 : REM turn off logical screen scaling
-1740 VDU 23, 1, 0 : REM disable text cursor
+1730 CLS : VDU 23,0,192,0
+1740 VDU 23, 1, 0
 1750 PROCdrawGrid(BMW%,BMH%,GRIDX%,GRIDY%)
 1760 PROCdrawPalette(PALX%,PALY%)
 1770 PROCselectPaletteCol(COL%)
@@ -267,7 +265,6 @@
 2850 ENDPROC
 
 2900 DEF PROCsetkeys
-2910 REM set the keys used for movment.
 2920 KEYG(0)=8 : KEYG(1)=21 : KEYG(2)=11 : KEYG(3)=10 
 2930 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
 2940 ENDPROC
@@ -285,7 +282,6 @@
 3100 ENDPROC
 
 3200 DEF PROCselectPaletteCol(c%)
-3210 REM select colour in palette
 3220 x% = COL% MOD PALW% : y% = COL% DIV PALW% : REM horizontal
 3230 PROCrect(PALX%+x%*10, PALY%+y%*10, 8, 8, 0)
 3240 REM select new colour
@@ -337,7 +333,7 @@
 3840 ENDPROC
 
 3850 DEF PROCcross(x%,y%,w%,h%,c%)
-3855 l%=CL%(c%): opp%=REVLU%(63-l%):  REM IF l% < 31 THEN opp%=15 ELSE opp%=0 
+3855 l%=CL%(c%): opp%=REVLU%(63-l%)
 3857 GCOL 0,opp%
 3860 MOVE x%,y% : DRAW x%+w%,y%+h%
 3870 MOVE x%+w%,y% : DRAW x%,y%+h%
@@ -346,7 +342,6 @@
 3899 REM ------ Grid/Bitmap Update Functions
 
 3900 DEF PROCsetCol(x%,y%,c%)
-3910 REM set colour in screen grid AND Data Grid G%
 3915 IF undo%=1 THEN PROCsaveUndo(BM%)
 3920 ind%=x%+y%*BMW%: U%?ind% = G%?(ind% + BM%*WH%) 
 3930 G%?(ind% + BM%*WH%)=c%
@@ -356,7 +351,6 @@
 3960 ENDPROC
 
 4000 DEF PROCclearGrid(col%, bmap%)
-4010 REM clear grid to a colour
 4020 LOCAL i%
 4030 PROCsaveUndo(bmap%)
 4040 PROCwbarr(G%+bmap%*WH%, WH%, col%)
@@ -367,7 +361,6 @@
 4090 ENDPROC
 
 4200 DEF PROCupdateScreenGrid(bmap%)
-4210 REM Update the screen grid from data grid for given bitmap
 4220 LOCAL col%,M%,I%,x%,y%
 4230 M%=G%+bmap%*WH%
 4240 FOR I%=0 TO WH%-1
@@ -404,7 +397,6 @@
 4800 REM ------ Sprite Functions
 
 4900 DEF PROCcreateSprite(w%,h%)
-4910 REM setup the sprite and bitmap. Clear both grids
 4920 LOCAL b%
 4930 FOR b%=0 TO NB%-1
 4940 VDU 23,0,&A0,b%+&FA00;2        : REM clear bitmap buffer
@@ -424,7 +416,6 @@
 5080 ENDPROC
 
 5100 DEF PROCupdateSpriteBitmap(bmap%)
-5110 REM display bitmap and update sprite with bitmap
 5120 VDU 23,27,0,bmap%
 5130 VDU 23,27,3,BMX%(bmap%);BMY%(bmap%); : REM draw bitmap
 5140 VDU 23,27,15: REM Refresh the sprites
@@ -501,7 +492,6 @@
 6399 REM ------ File Handling
 
 6400 DEF PROCshowFilename(fn$)
-6410 REM just display filename in status bar
 6420 GCOL 0,15 : MOVE 0,FLINE%*8-4 : DRAW 320,FLINE%*8-4
 6430 PRINT TAB(0,FLINE%);SPC(40);
 6440 COLOUR 31 : PRINT TAB(0,FLINE%);"FILE:";TAB(6,FLINE%);fn$;
@@ -578,7 +568,6 @@
 7350 ENDPROC 
 
 7400 DEF PROCloadDataFile(f$, b%, fmt%)
-7410 REM this loads file to internal memory and copies it out to the sprite
 7420 LOCAL col%, I%, IND%
 7430 PROCshowFilename(f$)
 7440 FHAN%=OPENIN(f$)
@@ -608,8 +597,8 @@
 7760 DATR% = ?(graphics+I%*datw%+0) DIV 85
 7770 DATG% = ?(graphics+I%*datw%+1) DIV 85
 7780 DATB% = ?(graphics+I%*datw%+2) DIV 85
-7790 IND% = DATR% * 16 + DATG% * 4 + DATB% : REM RGB colour as index
-7800 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
+7790 IND% = DATR% * 16 + DATG% * 4 + DATB% 
+7800 col% = REVLU%(IND%) 
 7810 M%?I% = col% : x%=I% MOD BMW% : y%=I% DIV BMW%
 7820 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
 7830 NEXT I%
@@ -621,7 +610,7 @@
 7930 M%=G%+WH%*b%
 7940 FOR I%=0 TO (WH%)-1
 7950 IND% = FNrgb2TOind(?(graphics+I%))
-7960 col% = REVLU%(IND%) : REM Reverse lookup of RGB colour to BBC Colour code
+7960 col% = REVLU%(IND%) 
 7970 M%?I% = col% : x%=I% MOD BMW% : y%=I% DIV BMW%
 7980 PROCcsquare(1+GRIDX%+x%*8, 1+GRIDY%+y%*8, col%)
 7990 NEXT I%
@@ -634,13 +623,12 @@
 8140 ENDPROC
 
 8200 DEF PROCsaveDataFile8bit(f$, b%, alpha%)
-8210 REM save raw data to a file. RGB or RGBA 8bit format with no header.
 8220 LOCAL I%, RGBIndex%, h%, a%
 8230 M%=G%+WH%*b%
 8240 h% = OPENOUT(f$)
 8250 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 8260 FOR I%=0 TO (WH%)-1
-8270 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
+8270 RGBIndex% = CL%(M%?I%)
 8280 BPUT#h%, FNindTOrgb(RGBIndex%,0)
 8290 BPUT#h%, FNindTOrgb(RGBIndex%,1)
 8300 BPUT#h%, FNindTOrgb(RGBIndex%,2)
@@ -652,13 +640,12 @@
 8340 ENDPROC
 
 8400 DEF PROCsaveDataFile2bit(f$, b%)
-8410 REM save raw data to a file. RGBA2222 format with no header.
 8420 LOCAL I%, RGBIndex%, h%
 8430 M%=G%+WH%*b%
 8440 h% = OPENOUT(f$)
 8450 IF h%=0 THEN PRINT TAB(20,FLINE%);"Failed to open file"; : ENDPROC
 8460 FOR I%=0 TO (WH%)-1
-8470 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
+8470 RGBIndex% = CL%(M%?I%)
 8480 out% = FNindTOrgb2(RGBIndex%)
 8485 IF TRANSP%=M%?I% THEN out% = out% AND &3F
 8490 BPUT#h%, out%
@@ -679,7 +666,7 @@
 8700 M%=G%+WH%*b%
 8710 FOR I%=0 TO (WH%)-1
 8720 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
-8730 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
+8730 RGBIndex% = CL%(M%?I%)
 8740 FOR J%=0 TO 2
 8750 IF FNindTOrgb(RGBIndex%,J%)=0 THEN SS$ = SS$+"0" ELSE SS$ = SS$+"&"+STR$~(FNindTOrgb(RGBIndex%,J%))
 8760 IF J%<2 THEN SS$=SS$+","
@@ -705,7 +692,7 @@
 9000 M%=G%+WH%*b%
 9010 FOR I%=0 TO (WH%)-1
 9020 IF I% MOD PPL% = 0 THEN PROCprintFileLine(h%,SS$) : SS$=STR$(ln%)+" DATA " : ln%=ln%+10
-9030 RGBIndex% = CL%(M%?I%) : REM lookup the RGB colour index for this colour 
+9030 RGBIndex% = CL%(M%?I%)
 9040 PIX%=RGBIndex%
 9050 IF RGBIndex%>0 AND TRANSP%<>M%?I% THEN PIX%=PIX% OR &C0 : REM alpha=1
 9060 IF PIX%=0 THEN SS$=SS$+"0" ELSE SS$=SS$+"&"+STR$~(PIX%)
@@ -744,14 +731,12 @@
 9600 REM ------- Generic Functions
 
 9700 DEF PROCfilledRect(x%,y%,w%,h%,c%)
-9710 REM assume screen scaling OFF
 9720 GCOL 0,c%
 9730 MOVE x%,y% 
 9740 PLOT 101, x%+w%, y%+h%
 9750 ENDPROC
 
 9800 DEF PROCrect(x%,y%,w%,h%,c%)
-9810 REM assume screen scaling is OFF
 9820 GCOL 0,c%
 9830 MOVE x%,y% 
 9840 DRAW x%+w%,y% 
@@ -791,7 +776,6 @@
 10330 ENDPROC
 
 10400 DEF PROCsetConfigVar(var$, val$)
-10410 REM PRINT "VAR:";var$;" VAL:";val$
 10420 IF var$="JOY" THEN CONFIG_JOY=VAL(val$)
 10430 IF var$="SIZE" THEN CONFIG_SIZE=VAL(val$)
 10440 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
@@ -1078,7 +1062,6 @@
 14750 DATA 0,&55,&AA,&FF
 
 14800 REM ------------ colour squares -------------
-14810 REM Use filled rect.
 
 14900 DEF PROCcsquare(x%,y%,c%)
 14910 PROCfilledRect(x%,y%,6,6,c%)
