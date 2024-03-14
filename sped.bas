@@ -31,8 +31,7 @@
 280 PX%=0 : PY%=0 : REM position
 290 BSstate%=0 : DIM BSrect%(4) : REM block select
 300 HaveBlock%=0 : DIM BLOCK%(WH%) : BlockW%=0:BlockH%=0 : REM copied block
-330 DIM KEYG(4), KEYP(4) : REM in order left, right, up down 
-340 KEY_SET=32 : KEY_DEL=127 : PROCsetkeys
+340 KEY_SET=32 : KEY_DEL=127 
 350 FLINE%=24 : REM FLINE is line on which filename appears
 360 F$=STRING$(20," ") 
 370 DIM SKey%(9) : FOR I%=0 TO 9 : SKey%=-1 : NEXT I%
@@ -76,10 +75,10 @@
 790 REM grid cursor movement
 800 IF CWRAP=0 PROCmovecheck ELSE PROCmovecheckWrap
 870 REM colour select movement
-900 IF (key = KEYP(0) OR key=KEYP(0)-32) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
-910 IF (key = KEYP(1) OR key=KEYP(1)-32) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
-920 IF (key = KEYP(2) OR key=KEYP(2)-32) AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
-930 IF (key = KEYP(3) OR key=KEYP(3)-32) AND COL%<=(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
+900 IF (key = 97 OR key=65) AND COL%>0 THEN PROCselectPaletteCol(COL%-1) : REM left
+910 IF (key = 100 OR key=68) AND COL%<63 THEN PROCselectPaletteCol(COL%+1) : REM right
+920 IF (key = 119 OR key=87) AND COL%>(PALW%-1) THEN PROCselectPaletteCol(COL%-PALW%) : REM up
+930 IF (key = 115 OR key=83) AND COL%<=(63-PALW%) THEN PROCselectPaletteCol(COL%+PALW%) : REM down
 940 REM space = set colour, backspace = delete (set to 0), f=fill to current col
 950 IF key = 32 OR key = 13 THEN PROCsetCol(PX%,PY%,COL%)
 960 IF BUTTON=215 THEN PROCsetCol(PX%,PY%,COL%)
@@ -131,10 +130,10 @@
 1400 END
 
 1410 DEF PROCmovecheck
-1415 IF key = KEYG(0) AND PX%>0 THEN PX%=PX%-1 : REM left
-1420 IF key = KEYG(1) AND PX%<(BMW%-1) THEN PX%=PX%+1 : REM right
-1425 IF key = KEYG(2) AND PY%>0 THEN PY%=PY%-1 : REM up
-1430 IF key = KEYG(3) AND PY%<(BMH%-1) THEN PY%=PY%+1 : REM down
+1415 IF key = 8 AND PX%>0 THEN PX%=PX%-1 : REM left
+1420 IF key = 21 AND PX%<(BMW%-1) THEN PX%=PX%+1 : REM right
+1425 IF key = 11 AND PY%>0 THEN PY%=PY%-1 : REM up
+1430 IF key = 10 AND PY%<(BMH%-1) THEN PY%=PY%+1 : REM down
 1435 IF JOY>0 AND (JOY AND 223)=JOY AND PX%>0 THEN PX%=PX%-1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM LEFT
 1440 IF JOY>0 AND (JOY AND 127)=JOY AND PX%<(BMW%-1) THEN PX%=PX%+1 : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM RIGHT
 1445 IF JOY>0 AND (JOY AND 253)=JOY AND PY%>0 THEN PY%=PY%-1 : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY : REM UP
@@ -142,10 +141,10 @@
 1455 ENDPROC
 
 1460 DEF PROCmovecheckWrap
-1465 IF key = KEYG(0) THEN PX%=(PX%-1+BMW%)MOD BMW% : REM left
-1470 IF key = KEYG(1) THEN PX%=(PX%+1)MOD BMW% : REM right
-1475 IF key = KEYG(2) THEN PY%=(PY%-1+BMH%)MOD BMH% : REM up
-1480 IF key = KEYG(3) THEN PY%=(PY%+1)MOD BMH% : REM down
+1465 IF key = 8 THEN PX%=(PX%-1+BMW%)MOD BMW% : REM left
+1470 IF key = 21 THEN PX%=(PX%+1)MOD BMW% : REM right
+1475 IF key = 11 THEN PY%=(PY%-1+BMH%)MOD BMH% : REM up
+1480 IF key = 10 THEN PY%=(PY%+1)MOD BMH% : REM down
 1485 IF JOY>0 AND (JOY AND 223)=JOY THEN PX%=(PX%-1+BMW%)MOD BMW% : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM LEFT
 1490 IF JOY>0 AND (JOY AND 127)=JOY THEN PX%=(PX%+1)MOD BMW% : TIME=0: REPEATUNTILTIME>CONFIG_JOYDELAY : REM RIGHT
 1495 IF JOY>0 AND (JOY AND 253)=JOY THEN PY%=(PY%-1+BMH%)MOD BMH% : TIME=0 : REPEATUNTILTIME>CONFIG_JOYDELAY : REM UP
@@ -263,11 +262,6 @@
 2830 PROCupdateScreenGrid(BM%)
 2840 PROCdrawBitmapBoxes(BM%)
 2850 ENDPROC
-
-2900 DEF PROCsetkeys
-2920 KEYG(0)=8 : KEYG(1)=21 : KEYG(2)=11 : KEYG(3)=10 
-2930 KEYP(0)=97 : KEYP(1)=100 : KEYP(2)=119 : KEYP(3)=115 
-2940 ENDPROC
 
 3000 DEF PROCdrawPalette(x%,y%)
 3010 REM draw palette colours - I% across, J% down
