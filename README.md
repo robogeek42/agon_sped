@@ -45,3 +45,34 @@ v0.22 Add ASM subroutines and fix multiple file save/export
 v1.00 Released
 
 v1.01 add ability to set a Transparent Colour, and save Alpha accordingly
+
+v1.02 Fix type2 8x8 bitmaps. Increase number of bitmaps in 8x8 mode to 48
+
+v1.03 Fix floodfill crash. Disable ESC. Add cursor-wrap. 
+
+- Cursor wrap can be enabled/disabled in sped.ini with the setting CWRAP=1
+
+v1.04 Fixes
+
+- Fix overwrite of next line entering long filenames.
+- Fix freeze if run without a SPED.INI present in current dir.
+
+v1.05 Add sticky feature and new SPED logo
+
+v1.06 Add ADL version of SPED.
+
+- spedADL is for use with bbcbasic24.  The 16bit version has run out of room (32k for compiled program - SPED is big!)
+- Fix crashed in sped.bas caused by file size
+- spedADL now has Shift/Roll feature.
+  - Allows the bitmap or a region of a bitmap to bit shifted by one pixel in any direction.
+  - With roll, the shifted pixels appear at the other side
+
+v1.07 Fix joystick issues. Add colour change command.
+
+- Fix: Joystick now accepts config options JOY=0|1 and JOYSTICK=0|1
+- Fix flickering when enabling Joystick in Emulator
+- Feature: Change pixel colour in current bitmap. Key "N"
+  - changes every pixel in the bit map with a given colour to a new one.
+
+
+
