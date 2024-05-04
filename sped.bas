@@ -1,5 +1,5 @@
 10 REM SPED The Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
-20 VERSION$="v1.05"
+20 VERSION$="v1.07"
 30 ON ERROR GOTO 700
 40 DIM graphics 1024
 50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0
@@ -68,7 +68,7 @@
 720 key=INKEY(0)
 730 IF CONFIG_JOY=1 JOY=GET(158) : BUTTON=GET(162) ELSE JOY=0 : BUTTON=0
 740 IF CONFIG_JOY=0 AND key=-1 GOTO 1360
-750 IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 1360 : REM skip to Until
+750 IF CONFIG_JOY=1 AND key=-1 AND (JOY=255 OR JOY=0) AND (BUTTON=247 OR BUTTON=240 OR BUTTON=0) GOTO 1360 : REM skip to Until
 760 PROCgridCursor(0) : PROCblockCursor(0)
 770 IF key = ASC("x") OR key=ASC("X") ISEXIT=1 : REM x=exit
 780 IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
@@ -119,6 +119,7 @@
 1310 IF key = ASC("[") AND BSstate%>0 THEN PROCrotateSelected(1,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 1315 IF key = ASC("t") OR key=ASC("T") THEN PROCselectTransp(COL%)
 1317 IF key = ASC("i") OR key=ASC("I") THEN STICKY%=1-STICKY% : PROCdrawSticky
+1318 IF key = ASC("n") OR key=ASC("N") THEN PROCchangecol
 1320 IF STICKY%=1 THEN PROCsetCol(PX%,PY%,COL%)
 1330 PROCprintSecondHelp(26)
 1340 PROCgridCursor(1) : PROCblockCursor(1)
@@ -157,6 +158,7 @@
 1605 COLOUR 62:PRINT TAB(0,0);:VDU 245,246,247,248
 1610 COLOUR 54:PRINT TAB(5,0);"SPRITE EDITOR";
 1620 COLOUR 20:PRINT TAB(19,0);"for the Agon ";
+1625 IF CONFIG_JOY=1 THEN COLOUR 11:PRINT TAB(33,0);"J";
 1630 COLOUR 8:PRINT TAB(35,0);VERSION$;
 1640 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
 1650 ENDPROC
@@ -202,7 +204,7 @@
 
 2200 DEF PROCprintSecondHelp(v%)
 2210 PROCshort(11,v%,"","L","oad"): PROCshort(17,v%,"sa","V","e"): PROCshort(23,v%,"","E","xport"): PROCshort(30,v%,"","U","ndo"):  PROCshort(36,v%,"e","X","it")
-2220 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(30,v%+1,"","/","flood")
+2220 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(28,v%+1,"","/","flood")  : PROCshort(35,v%+1,"ch","N","ge")
 2230 PROCshort(11,v%+2,"","B","lock"): PROCshort(17,v%+2,"","-","copy")
 2240 IF HaveBlock% THEN PROCshort(23,v%+2,"","=","paste") ELSE C.8:PRINT TAB(23,v%+2);"=paste";
 2250 PROCshort(30,v%+2,"St","I","cky")
@@ -771,6 +773,7 @@
 
 10400 DEF PROCsetConfigVar(var$, val$)
 10420 IF var$="JOY" THEN CONFIG_JOY=VAL(val$)
+10425 IF var$="JOYSTICK" THEN CONFIG_JOY=VAL(val$)
 10430 IF var$="SIZE" THEN CONFIG_SIZE=VAL(val$)
 10440 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
 10450 IF var$="C1" THEN C1=VAL(val$)
@@ -1069,3 +1072,18 @@
 15050 COLOUR 15
 15060 IF ISEXIT=0 PRINT:REPORT:PRINT " @ line ";ERL:END
 15070 PRINT : PRINT "Goodbye"
+15090 END
+
+16000 DEF PROCchangecol
+16010 LOCAL I%,M%,FromColInd%,From%,ToColInd%,To%
+16020 FromColInd%=FNinputInt("From colour:")
+16030 ToColInd%=FNinputInt("To colour:")
+16040 M%=G%+WH%*BM%
+16042 PROCsaveUndo(BM%)
+16050 FOR I%=0 TO WH%-1 
+16060 IF M%?I% = FromColInd% THEN M%?I%=ToColInd%
+16070 NEXT I%
+16080 PROCupdateBitmapFromGrid(BM%) : PROCupdateScreenGrid(BM%)
+16085 PROCclearStatusLine
+16090 ENDPROC
+

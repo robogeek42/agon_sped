@@ -1,7 +1,7 @@
 10 REM SPED The Sprite editor for the Agon Light and Console8 by Assif (robogeek42)
 15 REM ~~~~   ADL 24-bit Version    ~~~~
 16 REM ~~~~ Run with BBCBASIC24.BIN ~~~~
-20 VERSION$="v1.06"
+20 VERSION$="v1.07"
 30 ON ERROR GOTO 710
 40 DIM graphics 1024 : REM memory for file load 
 50 IF HIMEM>65536 THEN ADL=1 ELSE ADL=0 : REM 24-bit addr basic
@@ -74,7 +74,7 @@
 720 key=INKEY(0)
 730 IF CONFIG_JOY=1 JOY=GET(158) : BUTTON=GET(162) ELSE JOY=0 : BUTTON=0
 740 IF CONFIG_JOY=0 AND key=-1 GOTO 1360
-750 IF key=-1 AND JOY=255 AND BUTTON=247 GOTO 1360 : REM skip to Until
+750 IF CONFIG_JOY=1 AND key=-1 AND (JOY=255 OR JOY=0) AND (BUTTON=247 OR BUTTON=240 OR BUTTON=0) GOTO 1360 : REM skip to Until
 760 PROCgridCursor(0) : PROCblockCursor(0)
 770 IF key = ASC("x") OR key=ASC("X") ISEXIT=1 : REM x=exit
 780 IF ISEXIT=1 THEN yn$=FNinputStr("Are you sure (y/N)"): IF yn$<>"Y" AND yn$<>"y" THEN ISEXIT=0
@@ -129,7 +129,8 @@
 1321 IF (key = ASC("h") OR key=ASC("H")) AND BSstate%>0 THEN SHFT%=1 : DR%=FNchooseDir : PROCshiftSelected(DR%,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
 1322 IF (key = ASC("o") OR key=ASC("O")) AND BSstate%=0 THEN SHFT%=0 : DR%=FNchooseDir : PROCshiftSelected(DR%,0,0,BMW%-1,BMH%-1,BM%)
 1323 IF (key = ASC("o") OR key=ASC("O")) AND BSstate%>0 THEN SHFT%=0 : DR%=FNchooseDir : PROCshiftSelected(DR%,BSrect%(0),BSrect%(1),BSrect%(2),BSrect%(3),BM%)
-1325 IF STICKY%=1 THEN PROCsetCol(PX%,PY%,COL%)
+1324 IF key = ASC("n") OR key=ASC("N") THEN PROCchangecol
+1328 IF STICKY%=1 THEN PROCsetCol(PX%,PY%,COL%)
 1330 PROCprintSecondHelp(26)
 1340 PROCgridCursor(1) : PROCblockCursor(1)
 1350 REM Nokey GOTO comes here
@@ -166,8 +167,9 @@
 1600 DEF PROCprintTitle
 1605 COLOUR 62:PRINT TAB(0,0);:VDU 245,246,247,248
 1610 COLOUR 54:PRINT TAB(5,0);"SPRITE EDITOR";
-1620 COLOUR 20:PRINT TAB(19,0);"for the Agon ";
-1630 COLOUR 8:PRINT TAB(32,0);"ADL";VERSION$;
+1620 COLOUR 20:PRINT TAB(19,0);"for Agon ADL";
+1625 IF CONFIG_JOY=1 THEN COLOUR 11:PRINT TAB(33,0);"J";
+1630 COLOUR 8:PRINT TAB(35,0);VERSION$;
 1640 GCOL 0,15 : MOVE 0,10 : DRAW 320,10
 1650 ENDPROC
 
@@ -213,7 +215,7 @@
 
 2200 DEF PROCprintSecondHelp(v%)
 2210 PROCshort(11,v%,"","L","oad"): PROCshort(17,v%,"sa","V","e"): PROCshort(23,v%,"","E","xport"): PROCshort(30,v%,"","U","ndo"):  PROCshort(36,v%,"e","X","it")
-2220 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(30,v%+1,"","/","flood")
+2220 PROCshort(11,v%+1,"","P","ick"): PROCshort(17,v%+1,"","C","lear"): PROCshort(23,v%+1,"","F","ill") : PROCshort(28,v%+1,"","/","flood") : PROCshort(35,v%+1,"ch","N","ge")
 2230 PROCshort(11,v%+2,"","B","lock"): PROCshort(17,v%+2,"","-","copy")
 2240 IF HaveBlock% THEN PROCshort(23,v%+2,"","=","paste") ELSE C.8:PRINT TAB(23,v%+2);"=paste";
 2250 PROCshort(30,v%+2,"St","I","cky")
@@ -803,6 +805,7 @@
 10400 DEF PROCsetConfigVar(var$, val$)
 10410 REM PRINT "VAR:";var$;" VAL:";val$
 10420 IF var$="JOY" THEN CONFIG_JOY=VAL(val$)
+10425 IF var$="JOYSTICK" THEN CONFIG_JOY=VAL(val$)
 10430 IF var$="SIZE" THEN CONFIG_SIZE=VAL(val$)
 10440 IF var$="JOYDELAY" THEN CONFIG_JOYDELAY=VAL(val$)
 10450 IF var$="C1" THEN C1=VAL(val$)
@@ -1176,6 +1179,19 @@
 15840 REM BSstate%=0
 15850 PROCupdateBitmapFromGrid(b%) : PROCupdateScreenGrid(b%)
 15860 ENDPROC
+
+16000 DEF PROCchangecol
+16010 LOCAL I%,M%,FromColInd%,From%,ToColInd%,To%
+16020 FromColInd%=FNinputInt("From colour:")
+16030 ToColInd%=FNinputInt("To colour:")
+16040 M%=G%+WH%*BM%
+16042 PROCsaveUndo(BM%)
+16050 FOR I%=0 TO WH%-1 
+16060 IF M%?I% = FromColInd% THEN M%?I%=ToColInd%
+16070 NEXT I%
+16080 PROCupdateBitmapFromGrid(BM%) : PROCupdateScreenGrid(BM%)
+16085 PROCclearStatusLine
+16090 ENDPROC
 
 30000 REM  ------------ Error Handling -------------
 30010 REM LABEL_error:
